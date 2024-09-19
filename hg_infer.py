@@ -107,7 +107,7 @@ def perturbation_attribution(model, tokenizer, prompt,**kwargs):
     print(f"{final_attributes_dict}")
     return {
         "tokens": final_attributes_dict
-    }
+    },target
 
 
 
@@ -139,7 +139,7 @@ def gradient_attribution(model, tokenizer, prompt, kwargs):
 
 
 
-def calculate_attributes(prompt,model_weight=False, calculate_method="perturbation"):
+def calculate_attributes(prompt,component_sentences):
     """
     Calculate the attributions for the given model and calculate_method.
 
@@ -150,9 +150,15 @@ def calculate_attributes(prompt,model_weight=False, calculate_method="perturbati
     Returns:
     - attribution: The attributions calculated using the given calculate_method.
     """
+    calculate_method = "perturbation"
+    model_weight  = False
     model, tokenizer = load_model("meta-llama/Llama-2-13b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
     if calculate_method == "perturbation":
-        attribution = perturbation_attribution(model, tokenizer, prompt=prompt)
+        attribution,target = perturbation_attribution(model, tokenizer, prompt=prompt)
+        words_importance = calculate_word_scores(prompt, attribution)
+        component_importance = calculate_component_scores(words_importance.get('tokens'), component_sentences)
+        return attribution, words_importance, component_importance, target
+
     elif calculate_method == "gradient":
         attribution = gradient_attribution(model, tokenizer, prompt=prompt)
     if model_weight:
