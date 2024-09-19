@@ -61,7 +61,7 @@ def generate_text(model, tokenizer,input):
     model_input = tokenizer(input, return_tensors="pt", padding=True, truncation=True).to("cuda")
     model.eval()
     with torch.no_grad():
-        output_ids = model.generate(model_input["input_ids"], max_new_tokens=5)[0]
+        output_ids = model.generate(model_input["input_ids"], max_new_tokens=2)[0]
         generated_tokens = output_ids[len(model_input["input_ids"][0]):]
         response = tokenizer.decode(generated_tokens, skip_special_tokens=True)
     return response
@@ -152,9 +152,9 @@ def calculate_attributes(prompt,model_weight=False, calculate_method="perturbati
     """
     model, tokenizer = load_model("meta-llama/Llama-2-13b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
     if calculate_method == "perturbation":
-        attribution, model_logits = perturbation_attribution(model, tokenizer, prompt=prompt)
+        attribution = perturbation_attribution(model, tokenizer, prompt=prompt)
     elif calculate_method == "gradient":
-        attribution, model_logits = gradient_attribution(model, tokenizer, prompt=prompt)
+        attribution = gradient_attribution(model, tokenizer, prompt=prompt)
     if model_weight:
         pass
     else:
@@ -211,7 +211,7 @@ def run_peturbed_inference(df, results_path, column_names=None):
 
 if __name__ == "__main__":
     start = 45070
-    end = start + 20
+    end = start + 2
     inference_df = run_initial_inference(start=start,end=end)
     inference_df.to_pickle(f"{start}_{end}inferenced_df.pkl")
     print("\ndone the inference")
