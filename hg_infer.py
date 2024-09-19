@@ -194,7 +194,7 @@ def run_initial_inference(start, end,model,tokenizer):
 
 
 def only_calculate_results(prompt):
-    _, response = generate_text(model, tokenizer,prompt)
+    response = generate_text(model, tokenizer,prompt)
     return response
 
 
