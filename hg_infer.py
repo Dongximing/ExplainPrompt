@@ -193,12 +193,13 @@ def run_initial_inference(start, end,model,tokenizer):
     return result
 
 
-def only_calculate_results(prompt):
+def only_calculate_results(prompt,model, tokenizer):
     response = generate_text(model, tokenizer,prompt)
     return response
 
 
-def run_peturbed_inference(df, results_path, column_names=None):
+def run_peturbed_inference(df, model, tokenizer):
+    column_names = None
     if column_names is None:
         # getting the columns demarkated by `reconstructed`
         column_names = []
@@ -210,15 +211,15 @@ def run_peturbed_inference(df, results_path, column_names=None):
     print("running inference on petrubation columns:", column_names)
 
     for id, col_name in enumerate(column_names):
-        df[col_name + "_result"] = df.apply(lambda row: only_calculate_results(row[col_name]), axis=1)
+        df[col_name + "_result"] = df.apply(lambda row: only_calculate_results(row[col_name], model, tokenizer), axis=1)
     # df.to_pickle("sentence" + str(id) +"_intermediate-run_peturbed_inference.pkl")
     print("sentence has done!")
     return df
 
 
 if __name__ == "__main__":
-    start = 45070
-    end = start + 3
+    start = 45000
+    end = start +2000
 
     model, tokenizer = load_model("meta-llama/Llama-2-13b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
 
@@ -248,7 +249,7 @@ if __name__ == "__main__":
 
     with open(f"{start}_{end}reconstructed_df.pkl", "rb") as f:
         reconstructed_df = pickle.load(f)
-    perturbed_inferenced_df = run_peturbed_inference(reconstructed_df, results_path=None, column_names=None)
+    perturbed_inferenced_df = run_peturbed_inference(reconstructed_df, model, tokenizer)
     perturbed_inferenced_df.to_pickle(f"{start}_{end}perturbed_inferenced_df.pkl")
     print("\n done the reconstructed inference data")
 
