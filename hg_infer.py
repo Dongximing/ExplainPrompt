@@ -213,6 +213,7 @@ def run_peturbed_inference(df, results_path, column_names=None):
         df[col_name + "_result"] = df.apply(lambda row: only_calculate_results(row[col_name]), axis=1)
     # df.to_pickle("sentence" + str(id) +"_intermediate-run_peturbed_inference.pkl")
     print("sentence has done!")
+    return df
 
 
 if __name__ == "__main__":
