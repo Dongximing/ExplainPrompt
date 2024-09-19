@@ -13,6 +13,7 @@ def preprocess_data(examples):
     ranges = []
     queries = []
     instructions = []
+    lengths = []
     for query in examples['sentence']:
         combined = query + ' ' + instruction
         updated_sentences.append(combined)
@@ -20,10 +21,13 @@ def preprocess_data(examples):
         ranges.append(range_info)
         queries.append(query)
         instructions.append(instruction)
+        lengths.append(len(query))
     examples['sentence'] = updated_sentences
     examples['component_range'] = ranges
     examples['instruction'] = instructions
     examples['query'] = queries
+    examples['length'] = lengths
+    #print(lengths)
     return examples
 
 
@@ -42,14 +46,19 @@ def get_query_instruction_positions(query):
             "instruction": list(range(query_end, total_range))
             }
 
+def sort_by_length(example):
+    return example['length']
 
 def load_and_preprocess(dataset_range):
     dataset = load_dataset("sst2", split='train')
     preprocessed_dataset = dataset.map(preprocess_data, batched=True,  load_from_cache_file=False)
-    return preprocessed_dataset.select(list(dataset_range))
+    preprocessed_dataset = preprocessed_dataset.sort('length')
+    return preprocessed_dataset.select(range(dataset_range[0],dataset_range[1]-1))
 
 
 if __name__ == "__main__":
 
-    df = load_and_preprocess([1,2])
-    print(df[1])
+    df = load_and_preprocess([45000,63000])
+    print(df[10])
+    print(df[11])
+    print(df[12])

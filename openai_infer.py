@@ -170,6 +170,7 @@ def analyze_important_words(probabilities, encoded_prompt):
 
 def calculate(prompt, component_sentences):
     try:
+        print("prompt",prompt)
         candidates, encoded_prompt = mask_each_tokens_for_openai(prompt)
         total_problogits, response = inference_openai(candidates)
         tokens_importance = analyze_important_words(total_problogits, encoded_prompt)
@@ -180,8 +181,9 @@ def calculate(prompt, component_sentences):
         return None, None, None, None
 
 
-def run_initial_inference():
-    df = load_and_preprocess([5,5])
+def run_initial_inference(start, end):
+    df = load_and_preprocess([start,end])
+    print(len(df))
     data = []
     for ind, example in enumerate(df.select(range(len(df)-1))):
 
@@ -194,7 +196,10 @@ def run_initial_inference():
                      "component_level": component,
                      'instruction': example['instruction'],
                      'query': example['query'],
-                     "component_range": example['component_range']  # TODO: not a list, its a dict
+                     "component_range": example['component_range'],  # TODO: not a list, its a dict
+                     "instruction_weight": component[0].get("instruction"),
+                     "query_weight": component[0].get("query")
+
                      }
                 )
             else:
@@ -202,6 +207,10 @@ def run_initial_inference():
     result = pd.DataFrame(data)
 
     return result
+def only_calculate_results(prompt):
+    
+    _, response = inference_openai([prompt])
+    return response
 
 
 def run_peturbed_inference(df, results_path, column_names=None):
@@ -211,48 +220,52 @@ def run_peturbed_inference(df, results_path, column_names=None):
         column_names = []
         for col in df.columns:
             if '_reconstructed_' in col:
-                # TODO: asper Gopi's latest reuquirement, we run only for 0,2 run
                 if "0.2" in col:
                     column_names.append(col)
 
     print("running inference on petrubation columns:", column_names)
+    
+    for id, col_name in enumerate(column_names):
+        df[col_name+"_result"] = df.apply(lambda row: only_calculate_results(row[col_name]), axis=1)
+    # df.to_pickle("sentence" + str(id) +"_intermediate-run_peturbed_inference.pkl")
+    print("sentence has done!")
 
-    for col_name in column_names:
-        results = df.apply(
-            lambda row: calculate(row[col_name],component_sentences=row['component_range']), axis=1
-        )
-        df[f'{col_name}_token_level'], \
-            df[f'{col_name}_word_level'], \
-            df[f'{col_name}_component_level'], \
-            df[f'{col_name}_output'] = zip(*results)
-
-        # save after specific cols,
-        # if fails then remove the cols in the `column_names` arg
-        df.to_pickle(results_path + "_intermediate-run_peturbed_inference.pkl")
 
     return df
 
 
 if __name__ == "__main__":
-    # inference_df = run_initial_inference()
-    # inference_df.to_pickle("inferenced_df.pkl")
-    # print("\ndone the inference")
-    # postprocess_inferenced_df = postproces_inferenced(inference_df.copy())
-    # postprocess_inferenced_df.to_pickle("postprocess_inferenced_df.pkl")
-    # print("\n done the postprocess")
-    # with open("postprocess_inferenced_df.pkl", "rb") as f:
-    #     postprocess_inferenced_df = pickle.load(f)
-    #postprocess_inferenced_df
-    # perturbed_df = run_peturbation(postprocess_inferenced_df.copy())
-    # perturbed_df.to_pickle("perturbed_df.pkl")
-    with open("perturbed_df.pkl", "rb") as f:
-        perturbed_df = pickle.load(f)
-    # print("\n done the perturbed")
-    reconstructed_df = do_peturbed_reconstruct(perturbed_df.copy(), None)
-    reconstructed_df.to_pickle("reconstructed_df.pkl")
-    with open("reconstructed_df.pkl", "rb") as f:
-        perturbed_df = pickle.load(f)
+    start = 45090
+    end = start + 20
+    inference_df = run_initial_inference(start=start,end=end)
+    inference_df.to_pickle(f"{start}_{end}inferenced_df.pkl")
+    print("\ndone the inference")
+
+    with open(f"{start}_{end}inferenced_df.pkl", "rb") as f:
+        postprocess_inferenced_df = pickle.load(f)
+    postprocess_inferenced_df = postproces_inferenced(postprocess_inferenced_df)
+    postprocess_inferenced_df.to_pickle(f"{start}_{end}postprocess_inferenced_df.pkl")
+    print("\n done the postprocess")
+
+
+    with open(f"{start}_{end}postprocess_inferenced_df.pkl", "rb") as f:
+        postprocess_inferenced_df = pickle.load(f)
+
+    perturbed_df = run_peturbation(postprocess_inferenced_df.copy())
+    perturbed_df.to_pickle(f"{start}_{end}perturbed_df.pkl")
+    print("\n done the perturbed")
+
+    with open(f"{start}_{end}perturbed_df.pkl", "rb") as f:
+        reconstructed_df = pickle.load(f)
+    reconstructed_df = do_peturbed_reconstruct(reconstructed_df.copy(), None)
+    reconstructed_df.to_pickle(f"{start}_{end}reconstructed_df.pkl")
     print("\n done the reconstructed")
+
+    with open(f"{start}_{end}reconstructed_df.pkl", "rb") as f:
+        reconstructed_df = pickle.load(f)
+    perturbed_inferenced_df = run_peturbed_inference(reconstructed_df, results_path=None, column_names=None)
+    perturbed_inferenced_df.to_pickle(f"{start}_{end}perturbed_inferenced_df.pkl")
+    print("\n done the reconstructed inference data")
 
 
 

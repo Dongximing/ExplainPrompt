@@ -4,16 +4,18 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 import random
 import sys
 import numpy as np
+import pandas as pd
+from utils import calculate_word_scores, calculate_component_scores, strip_tokenizer_prefix, postproces_inferenced
+from data_read_preprocess import load_and_preprocess
+from peturbation import run_peturbation, do_peturbed_reconstruct
 from captum.attr import (
     FeatureAblation,
-    ShapleyValues,
     LayerIntegratedGradients,
     LLMAttribution,
     LLMGradientAttribution,
     TextTokenInput,
-    TextTemplateInput,
-    ProductBaselines,
 )
+import pickle
 from utils import generate_original_tokens_level_attribute
 
 
@@ -68,7 +70,7 @@ def generate_text(model, tokenizer,input):
 
 
 
-def perturbation_attribution(model, tokenizer,prompt,**kwargs):
+def perturbation_attribution(model, tokenizer, prompt,**kwargs):
     """
     Calculate attribution using perturbation method.
 
@@ -108,8 +110,9 @@ def gradient_attribution(model, tokenizer, prompt, kwargs):
     Returns:
     - attribution: The attributions calculated using the gradient method.
     """
-    attribution = LayerIntegratedGradients(model)
-    llm_attr = LLMGradientAttribution(attribution, tokenizer)
+    emb_layer = model.get_submodule("model.embed_tokens")
+    ig = LayerIntegratedGradients(model, emb_layer)
+    llm_attr = LLMGradientAttribution(ig, tokenizer)
     inp = TextTokenInput(
         prompt,
         tokenizer,
@@ -119,11 +122,10 @@ def gradient_attribution(model, tokenizer, prompt, kwargs):
 
     return attr_res
 
-def openai_logit_attribution(model):
 
 
 
-def calculate_attributes(model_weight=False, calculate_method="perturbation"):
+def calculate_attributes(prompt,model_weight=False, calculate_method="perturbation"):
     """
     Calculate the attributions for the given model and calculate_method.
 
@@ -134,14 +136,95 @@ def calculate_attributes(model_weight=False, calculate_method="perturbation"):
     Returns:
     - attribution: The attributions calculated using the given calculate_method.
     """
+    model, tokenizer = load_model("meta-llama/Llama-2-13b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
     if calculate_method == "perturbation":
-        attribution = perturbation_attribution(self.model, self.tokenizer)
+        attribution, model_logits = perturbation_attribution(model, tokenizer, prompt=prompt)
     elif calculate_method == "gradient":
-        attribution = (self.model, self.tokenizer)
-        if model_weight:
-            attribution.attribute(self.model.get_input_embeddings().weight, target=self.target_token_id)
-        else:
-            attribution.attribute(self.input_tokens, target=self.target_token_id)
+        attribution, model_logits = gradient_attribution(model, tokenizer, prompt=prompt)
+    if model_weight:
+        pass
+    else:
+        pass
+def run_initial_inference(start, end):
+    df = load_and_preprocess([start,end])
+    print(len(df))
+    data = []
+    for ind, example in enumerate(df.select(range(len(df)-1))):
 
-    elif calculate_method == "llm_attribution":
-        attribution = LLMAttribution(self.model,
+            token, word, component, real_output = calculate_attributes(example['sentence'], example['component_range'])
+            print("component----------->",component[2])
+            if token is not None:
+                data.append(
+                    {'prompt': example['sentence'], "real_output": real_output, "token_level": token, "word_level": word,
+                     "label": example['label'],
+                     "component_level": component,
+                     'instruction': example['instruction'],
+                     'query': example['query'],
+                     "component_range": example['component_range'],  # TODO: not a list, its a dict
+                     "instruction_weight": component[0].get("instruction"),
+                     "query_weight": component[0].get("query")
+
+                     }
+                )
+            else:
+                print(f"hg_infer.py:170  No output for prompt: {example['sentence']}")
+    result = pd.DataFrame(data)
+
+    return result
+
+
+def only_calculate_results(prompt):
+    _, response = generate_text([prompt])
+    return response
+
+
+def run_peturbed_inference(df, results_path, column_names=None):
+    if column_names is None:
+        # getting the columns demarkated by `reconstructed`
+        column_names = []
+        for col in df.columns:
+            if '_reconstructed_' in col:
+                if "0.2" in col:
+                    column_names.append(col)
+
+    print("running inference on petrubation columns:", column_names)
+
+    for id, col_name in enumerate(column_names):
+        df[col_name + "_result"] = df.apply(lambda row: only_calculate_results(row[col_name]), axis=1)
+    # df.to_pickle("sentence" + str(id) +"_intermediate-run_peturbed_inference.pkl")
+    print("sentence has done!")
+
+
+if __name__ == "__main__":
+    start = 45070
+    end = start + 20
+    inference_df = run_initial_inference(start=start,end=end)
+    inference_df.to_pickle(f"{start}_{end}inferenced_df.pkl")
+    print("\ndone the inference")
+
+    with open(f"{start}_{end}inferenced_df.pkl", "rb") as f:
+        postprocess_inferenced_df = pickle.load(f)
+    postprocess_inferenced_df = postproces_inferenced(postprocess_inferenced_df)
+    postprocess_inferenced_df.to_pickle(f"{start}_{end}postprocess_inferenced_df.pkl")
+    print("\n done the postprocess")
+
+
+    with open(f"{start}_{end}postprocess_inferenced_df.pkl", "rb") as f:
+        postprocess_inferenced_df = pickle.load(f)
+
+    perturbed_df = run_peturbation(postprocess_inferenced_df.copy())
+    perturbed_df.to_pickle(f"{start}_{end}perturbed_df.pkl")
+    print("\n done the perturbed")
+
+    with open(f"{start}_{end}perturbed_df.pkl", "rb") as f:
+        reconstructed_df = pickle.load(f)
+    reconstructed_df = do_peturbed_reconstruct(reconstructed_df.copy(), None)
+    reconstructed_df.to_pickle(f"{start}_{end}reconstructed_df.pkl")
+    print("\n done the reconstructed")
+
+    with open(f"{start}_{end}reconstructed_df.pkl", "rb") as f:
+        reconstructed_df = pickle.load(f)
+    perturbed_inferenced_df = run_peturbed_inference(reconstructed_df, results_path=None, column_names=None)
+    perturbed_inferenced_df.to_pickle(f"{start}_{end}perturbed_inferenced_df.pkl")
+    print("\n done the reconstructed inference data")
+
