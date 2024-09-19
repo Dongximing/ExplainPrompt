@@ -139,7 +139,7 @@ def gradient_attribution(model, tokenizer, prompt, kwargs):
 
 
 
-def calculate_attributes(prompt,component_sentences):
+def calculate_attributes(prompt,component_sentences,model,tokenizer):
     """
     Calculate the attributions for the given model and calculate_method.
 
@@ -152,7 +152,6 @@ def calculate_attributes(prompt,component_sentences):
     """
     calculate_method = "perturbation"
     model_weight  = False
-    model, tokenizer = load_model("meta-llama/Llama-2-13b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
     if calculate_method == "perturbation":
         attribution,target = perturbation_attribution(model, tokenizer, prompt=prompt)
         words_importance = calculate_word_scores(prompt, attribution)
@@ -165,13 +164,14 @@ def calculate_attributes(prompt,component_sentences):
         pass
     else:
         pass
-def run_initial_inference(start, end):
+def run_initial_inference(start, end,model,tokenizer):
     df = load_and_preprocess([start,end])
     print(len(df))
     data = []
+
     for ind, example in enumerate(df.select(range(len(df)-1))):
 
-            token, word, component, real_output = calculate_attributes(example['sentence'], example['component_range'])
+            token, word, component, real_output = calculate_attributes(example['sentence'], example['component_range'],model,tokenizer)
             print("component----------->",component[2])
             if token is not None:
                 data.append(
@@ -194,7 +194,7 @@ def run_initial_inference(start, end):
 
 
 def only_calculate_results(prompt):
-    _, response = generate_text([prompt])
+    _, response = generate_text(model, tokenizer,prompt)
     return response
 
 
@@ -218,7 +218,10 @@ def run_peturbed_inference(df, results_path, column_names=None):
 if __name__ == "__main__":
     start = 45070
     end = start + 3
-    inference_df = run_initial_inference(start=start,end=end)
+
+    model, tokenizer = load_model("meta-llama/Llama-2-13b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
+
+    inference_df = run_initial_inference(start=start,end=end,model= model,tokenizer = tokenizer)
     inference_df.to_pickle(f"{start}_{end}inferenced_df.pkl")
     print("\ndone the inference")
 
