@@ -194,9 +194,9 @@ def run_initial_inference(start, end,model,tokenizer):
 
 
 def only_calculate_results(prompt,model, tokenizer):
-    print(prompt)
+    #print(prompt)
     response = generate_text(model, tokenizer,prompt)
-    print(response)
+    #print(response)
     return response
 
 
@@ -221,7 +221,7 @@ def run_peturbed_inference(df, model, tokenizer):
 
 if __name__ == "__main__":
     start = 45000
-    end = start +3
+    end = start +2000
 
     model, tokenizer = load_model("meta-llama/Llama-2-13b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
 
