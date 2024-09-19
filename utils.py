@@ -18,6 +18,13 @@ def strip_tokenizer_prefix(token):
     token = token.lstrip('')
     token = token.lstrip(' ')
     return token
+def hg_strip_tokenizer_prefix(token):
+    token = token.decode('utf-8')
+    token = token.lstrip('▁')
+    token = token.lstrip('')
+    token = token.lstrip(' ')
+    return token
+
 
 def get_non_synonyms(word):
     """Fetch non-synonyms for a given word."""

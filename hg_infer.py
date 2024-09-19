@@ -5,7 +5,7 @@ import random
 import sys
 import numpy as np
 import pandas as pd
-from utils import calculate_word_scores, calculate_component_scores, strip_tokenizer_prefix, postproces_inferenced
+from utils import calculate_word_scores, calculate_component_scores, hg_strip_tokenizer_prefix, postproces_inferenced
 from data_read_preprocess import load_and_preprocess
 from peturbation import run_peturbation, do_peturbed_reconstruct
 from captum.attr import (
@@ -93,8 +93,22 @@ def perturbation_attribution(model, tokenizer, prompt,**kwargs):
         skip_tokens=[1],  # skip the special token for the start of the text <s>
     )
     attr_res = llm_attr.attribute(inp, target=target)
+    real_attr_res = attr_res.token_attr.cpu().detach().numpy()
+    real_attr_res = np.absolute(real_attr_res)
+    real_attr_res = np.sum(real_attr_res,axis=0)
+    labels = attr_res.input_tokens
+    newer_sum_normalized_array = real_attr_res / np.sum(real_attr_res)
+    final_attributes_dict = [{
+        'token': hg_strip_tokenizer_prefix(labels[i]),
+        'type': 'input',
+        'value': newer_sum_normalized_array[i],
+        'position': i
+    } for i, item in enumerate(labels)]
+    print(f"{final_attributes_dict}")
+    return {
+        "tokens": final_attributes_dict
+    }
 
-    return attr_res
 
 
 def gradient_attribution(model, tokenizer, prompt, kwargs):
@@ -183,7 +197,7 @@ def run_peturbed_inference(df, results_path, column_names=None):
         # getting the columns demarkated by `reconstructed`
         column_names = []
         for col in df.columns:
-            if '_reconstructed_' in col:
+              if '_reconstructed_' in col:
                 if "0.2" in col:
                     column_names.append(col)
 
