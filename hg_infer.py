@@ -174,6 +174,7 @@ def perturbation_attribution(model, tokenizer, prompt,**kwargs):
     nested_list = [weight[i:i + 2] for i in range(0, len(weight), 2)]
     np_array = np.array(nested_list)
     print(np_array)
+    print(real_attr_res)
     real_attr_res = real_attr_res * np_array
 
 
