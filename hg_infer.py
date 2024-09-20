@@ -170,6 +170,7 @@ def perturbation_attribution(model, tokenizer, prompt,**kwargs):
                     weight.append(1)
                 else:
                     weight.append(0)
+    print(len(weight))
     nested_list = [weight[i:i + 2] for i in range(0, len(weight), 2)]
     np_array = np.array(nested_list)
     print(np_array)
