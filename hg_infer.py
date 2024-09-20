@@ -175,7 +175,7 @@ def perturbation_attribution(model, tokenizer, prompt,**kwargs):
     np_array = np.array(nested_list)
     print(np_array)
     print(real_attr_res)
-    real_attr_res = real_attr_res[:,:-1] * np_array
+    real_attr_res = real_attr_res[:-1,:] * np_array
 
 
 
@@ -326,7 +326,7 @@ def run_peturbed_inference(df, model, tokenizer):
 
 if __name__ == "__main__":
     start = 45000
-    end = start +3
+    end = start +1000
 
     model, tokenizer = load_model("meta-llama/Llama-2-13b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
 
