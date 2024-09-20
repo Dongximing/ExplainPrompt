@@ -159,7 +159,7 @@ def perturbation_attribution(model, tokenizer, prompt,**kwargs):
     for idx in range(candidate_input.shape[0]):  # Loop through each token column-wise
         # Select the column of tokens, ensuring it's in the correct shape ([batch_size, num_tokens])
         current_input = candidate_input[idx, :].unsqueeze(0)
-        print(current_input)
+        #print(current_input)
         # Generate or pass to the model
         with torch.no_grad():
 
@@ -171,11 +171,11 @@ def perturbation_attribution(model, tokenizer, prompt,**kwargs):
                 else:
                     weight.append(0)
     print(len(weight))
-    nested_list = [weight[i:i + 2] for i in range(0, len(weight), 2)]
+    nested_list = [weight[i::2] for i in range(2)]
     np_array = np.array(nested_list)
     print(np_array)
     print(real_attr_res)
-    real_attr_res = real_attr_res * np_array
+    real_attr_res = real_attr_res[:,:-1] * np_array
 
 
 
