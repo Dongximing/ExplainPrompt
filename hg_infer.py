@@ -94,11 +94,11 @@ def generate_text_with_logit(model, tokenizer, current_input, bl=True):
         - response: The generated text based on the input prompt.
     """
     if type(current_input) == str:
-        inputs = tokenizer([current_input], return_tensors="pt")
+        inputs = tokenizer([current_input], return_tensors="pt",add_special_tokens=False).to("cuda")
     else:
         inputs = tokenizer.decode(current_input[0])
 
-        inputs = tokenizer([inputs], return_tensors="pt")
+        inputs = tokenizer([inputs], return_tensors="pt",add_special_tokens=False).to("cuda")
 
     outputs = model.generate(**inputs, temperature=0.01, output_logits=True, max_new_tokens=2,
                              return_dict_in_generate=True, output_scores=True)
