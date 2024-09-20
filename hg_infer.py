@@ -61,12 +61,69 @@ def generate_text(model, tokenizer,input):
     model_input = tokenizer(input, return_tensors="pt", padding=True, truncation=True).to("cuda")
     model.eval()
     with torch.no_grad():
-        output_ids = model.generate(model_input["input_ids"], max_new_tokens=2)[0]
+        output_ids = model.generate(model_input["input_ids"], max_new_tokens=2,temperature=0.01)[0]
         generated_tokens = output_ids[len(model_input["input_ids"][0]):]
         response = tokenizer.decode(generated_tokens, skip_special_tokens=True)
     return response
 
 
+def generated_tensor_candidate(baseline):
+    number_line = baseline.shape[1]
+    output_tensor = baseline.repeat(number_line, 1)
+    mask = torch.eye(number_line, dtype=bool)
+    output_tensor[mask] = 2
+
+    return output_tensor
+
+
+def generate_candidate(original_prompt, tokenizer):
+    baseline_input = tokenizer(original_prompt, return_tensors="pt", add_special_tokens=False).to("cuda")
+    candidate_input = generated_tensor_candidate(baseline_input["input_ids"])
+    return candidate_input
+
+def generate_text_with_logit(model, tokenizer, current_input, bl=True):
+    """
+    Generate text using the given model and tokenizer.
+
+    Parameters:
+    - model: The model to generate text.
+    - tokenizer: The tokenizer used to tokenize the input.
+    - input: The input string(prompt string)
+
+    Returns:
+        - response: The generated text based on the input prompt.
+    """
+    if type(current_input) == str:
+        inputs = tokenizer([current_input], return_tensors="pt")
+    else:
+        inputs = tokenizer.decode(current_input[0])
+
+        inputs = tokenizer([inputs], return_tensors="pt")
+
+    outputs = model.generate(**inputs, temperature=0.01, output_logits=True, max_new_tokens=3,
+                             return_dict_in_generate=True, output_scores=True)
+    response = tokenizer.decode(outputs['sequences'][0][len(inputs["input_ids"][0]):], skip_special_tokens=True)
+    # print(outputs)
+    all_top_logits = []
+    # print(outputs.scores)
+    if bl:
+        k = 20
+    else:
+        k = 1
+    for i in range(len(outputs.scores)):
+        log_probabilities = (outputs.logits)[i]
+        top_logits, top_indices = torch.topk(log_probabilities, k)
+        all_top_logits.append((top_indices[0], top_logits[0]))
+
+    baselines = []
+    for step, (indices, logits) in enumerate(all_top_logits):
+
+        baseline = []
+        for idx, logit in zip(indices, logits):
+            token = tokenizer.decode([idx.item()])
+            baseline.append(token)
+        baselines.append(baseline)
+    return baselines
 
 
 
@@ -95,8 +152,35 @@ def perturbation_attribution(model, tokenizer, prompt,**kwargs):
     attr_res = llm_attr.attribute(inp, target=target)
     real_attr_res = attr_res.token_attr.cpu().detach().numpy()
     real_attr_res = np.absolute(real_attr_res)
+    baseline = generate_text_with_logit(model, tokenizer, prompt, bl=False)
+
+    candidate_input = generate_candidate(prompt, tokenizer)
+    weight = []
+    for idx in range(candidate_input.shape[0]):  # Loop through each token column-wise
+        # Select the column of tokens, ensuring it's in the correct shape ([batch_size, num_tokens])
+        current_input = candidate_input[idx, :].unsqueeze(0)
+        print(current_input)
+        # Generate or pass to the model
+        with torch.no_grad():
+
+            outputs = generate_text_with_logit(model, tokenizer, current_input, bl=True)
+            for id, i in enumerate(baseline):
+                bs = i[0]
+                if bs in outputs[id]:
+                    weight.append(1)
+                else:
+                    weight.append(0)
+    nested_list = [weight[i:i + 2] for i in range(0, len(weight), 2)]
+    np_array = np.array(nested_list)
+    print(np_array)
+    real_attr_res = real_attr_res * np_array
+
+
+
     real_attr_res = np.sum(real_attr_res,axis=0)
+
     labels = attr_res.input_tokens
+
     newer_sum_normalized_array = real_attr_res / np.sum(real_attr_res)
     final_attributes_dict = [{
         'token': hg_strip_tokenizer_prefix(labels[i]),
@@ -108,6 +192,35 @@ def perturbation_attribution(model, tokenizer, prompt,**kwargs):
     return {
         "tokens": final_attributes_dict
     },target
+
+
+def top_20_attribution(model, tokenizer, prompt,**kwargs):
+    """
+    Calculate attribution using perturbation method.
+
+    Parameters:
+    - model: The model to calculate the attribution for.
+    - tokenizer: The tokenizer used to tokenize the input.
+    - prompt: The input tokens for which to calculate the attribution.
+    - kwargs: Additional keyword arguments for the perturbation method.
+
+    Returns:
+    - attribution: The attributions calculated using the perturbation method.
+    """
+    baseline = model.generate()
+    baseline_logits  = []
+    final_attributes_dict = [{
+        'token': hg_strip_tokenizer_prefix(labels[i]),
+        'type': 'input',
+        'value': newer_sum_normalized_array[i],
+        'position': i
+    } for i, item in enumerate(labels)]
+    print(f"{final_attributes_dict}")
+    return {
+        "tokens": final_attributes_dict
+    },target
+
+
 
 
 
@@ -124,6 +237,7 @@ def gradient_attribution(model, tokenizer, prompt, kwargs):
     Returns:
     - attribution: The attributions calculated using the gradient method.
     """
+    target = generate_text(model, tokenizer, prompt)
     emb_layer = model.get_submodule("model.embed_tokens")
     ig = LayerIntegratedGradients(model, emb_layer)
     llm_attr = LLMGradientAttribution(ig, tokenizer)
@@ -133,8 +247,22 @@ def gradient_attribution(model, tokenizer, prompt, kwargs):
         skip_tokens=[1],  # skip the special token for the start of the text <s>
     )
     attr_res = llm_attr.attribute(inp)
-
-    return attr_res
+    attr_res = llm_attr.attribute(inp, target=target)
+    real_attr_res = attr_res.token_attr.cpu().detach().numpy()
+    real_attr_res = np.absolute(real_attr_res)
+    real_attr_res = np.sum(real_attr_res, axis=0)
+    labels = attr_res.input_tokens
+    newer_sum_normalized_array = real_attr_res / np.sum(real_attr_res)
+    final_attributes_dict = [{
+        'token': hg_strip_tokenizer_prefix(labels[i]),
+        'type': 'input',
+        'value': newer_sum_normalized_array[i],
+        'position': i
+    } for i, item in enumerate(labels)]
+    print(f"{final_attributes_dict}")
+    return {
+        "tokens": final_attributes_dict
+    }, target
 
 
 

@@ -59,7 +59,7 @@ def inference_openai(sentences):
             top_logprobs = 20  # if we want to get top 20 logprobs, otherwise 20
         API_RESPONSE = get_completion(
             [{"role": "user", "content": sentence}],
-            model="gpt-3.5-turbo",
+            model="gpt-3.5-turbo-0125",
             logprobs=True,
             top_logprobs=top_logprobs,
         )
@@ -235,8 +235,8 @@ def run_peturbed_inference(df, results_path, column_names=None):
 
 
 if __name__ == "__main__":
-    start = 45150
-    end = start +
+    start = 45650
+    end = start + 350
     inference_df = run_initial_inference(start=start,end=end)
     inference_df.to_pickle(f"{start}_{end}inferenced_df.pkl")
     print("\ndone the inference")
