@@ -100,7 +100,7 @@ def generate_text_with_logit(model, tokenizer, current_input, bl=True):
 
         inputs = tokenizer([inputs], return_tensors="pt")
 
-    outputs = model.generate(**inputs, temperature=0.01, output_logits=True, max_new_tokens=3,
+    outputs = model.generate(**inputs, temperature=0.01, output_logits=True, max_new_tokens=2,
                              return_dict_in_generate=True, output_scores=True)
     response = tokenizer.decode(outputs['sequences'][0][len(inputs["input_ids"][0]):], skip_special_tokens=True)
     # print(outputs)
