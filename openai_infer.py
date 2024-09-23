@@ -235,8 +235,8 @@ def run_peturbed_inference(df, results_path, column_names=None):
 
 
 if __name__ == "__main__":
-    start = 45650
-    end = start + 350
+    start = 46500
+    end = start +500
     inference_df = run_initial_inference(start=start,end=end)
     inference_df.to_pickle(f"{start}_{end}inferenced_df.pkl")
     print("\ndone the inference")

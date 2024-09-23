@@ -330,31 +330,31 @@ if __name__ == "__main__":
 
     model, tokenizer = load_model("meta-llama/Llama-2-13b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
 
-    inference_df = run_initial_inference(start=start,end=end,model= model,tokenizer = tokenizer)
-    inference_df.to_pickle(f"new{start}_{end}inferenced_df.pkl")
-    print("\ndone the inference")
+    # inference_df = run_initial_inference(start=start,end=end,model= model,tokenizer = tokenizer)
+    # inference_df.to_pickle(f"new{start}_{end}inferenced_df.pkl")
+    # print("\ndone the inference")
 
-    with open(f"{start}_{end}inferenced_df.pkl", "rb") as f:
+    with open(f"new{start}_{end}inferenced_df.pkl", "rb") as f:
         postprocess_inferenced_df = pickle.load(f)
     postprocess_inferenced_df = postproces_inferenced(postprocess_inferenced_df)
     postprocess_inferenced_df.to_pickle(f"new{start}_{end}postprocess_inferenced_df.pkl")
     print("\n done the postprocess")
 
 
-    with open(f"{start}_{end}postprocess_inferenced_df.pkl", "rb") as f:
+    with open(f"new{start}_{end}postprocess_inferenced_df.pkl", "rb") as f:
         postprocess_inferenced_df = pickle.load(f)
 
     perturbed_df = run_peturbation(postprocess_inferenced_df.copy())
     perturbed_df.to_pickle(f"new{start}_{end}perturbed_df.pkl")
     print("\n done the perturbed")
 
-    with open(f"{start}_{end}perturbed_df.pkl", "rb") as f:
+    with open(f"new{start}_{end}perturbed_df.pkl", "rb") as f:
         reconstructed_df = pickle.load(f)
     reconstructed_df = do_peturbed_reconstruct(reconstructed_df.copy(), None)
     reconstructed_df.to_pickle(f"new{start}_{end}reconstructed_df.pkl")
     print("\n done the reconstructed")
 
-    with open(f"{start}_{end}reconstructed_df.pkl", "rb") as f:
+    with open(f"new{start}_{end}reconstructed_df.pkl", "rb") as f:
         reconstructed_df = pickle.load(f)
     perturbed_inferenced_df = run_peturbed_inference(reconstructed_df, model, tokenizer)
     perturbed_inferenced_df.to_pickle(f"new{start}_{end}perturbed_inferenced_df.pkl")
