@@ -127,7 +127,7 @@ def generate_text_with_logit(model, tokenizer, current_input, bl=True):
 
 
 
-def perturbation_attribution_top_k(model, tokenizer, prompt,**kwargs):
+def perturbation_attribution_top_k(model, tokenizer, prompt):
     """
     Calculate attribution using perturbation method.
 
@@ -140,7 +140,8 @@ def perturbation_attribution_top_k(model, tokenizer, prompt,**kwargs):
     Returns:
     - attribution: The attributions calculated using the perturbation method.
     """
-
+    import time
+    start_time = time.time()
     target = generate_text(model, tokenizer, prompt)
     attribution = FeatureAblation(model)
     llm_attr = LLMAttribution(attribution, tokenizer)
@@ -150,6 +151,9 @@ def perturbation_attribution_top_k(model, tokenizer, prompt,**kwargs):
         skip_tokens=[1],  # skip the special token for the start of the text <s>
     )
     attr_res = llm_attr.attribute(inp, target=target)
+    gpu_memory_usage = torch.cuda.max_memory_allocated(device=0)
+    gpu_memory_usage = gpu_memory_usage/1024/1024/1204
+    print(f"GPU Memory Usage: {gpu_memory_usage} GB")
     real_attr_res = attr_res.token_attr.cpu().detach().numpy()
     real_attr_res = np.absolute(real_attr_res)
     baseline = generate_text_with_logit(model, tokenizer, prompt, bl=False)
@@ -170,11 +174,9 @@ def perturbation_attribution_top_k(model, tokenizer, prompt,**kwargs):
                     weight.append(1)
                 else:
                     weight.append(0)
-    print(len(weight))
+
     nested_list = [weight[i::2] for i in range(2)]
     np_array = np.array(nested_list)
-    print(np_array)
-    print(real_attr_res)
     real_attr_res = real_attr_res[:-1,:] * np_array
 
 
@@ -190,13 +192,13 @@ def perturbation_attribution_top_k(model, tokenizer, prompt,**kwargs):
         'value': newer_sum_normalized_array[i],
         'position': i
     } for i, item in enumerate(labels)]
-    print(f"{final_attributes_dict}")
+    end_time = time.time()
     return {
         "tokens": final_attributes_dict
-    },target
+    },target,end_time - start_time, gpu_memory_usage
 
 
-def perturbation_attribution(model, tokenizer, prompt,**kwargs):
+def perturbation_attribution(model, tokenizer, prompt):
     """
     Calculate attribution using perturbation method.
 
@@ -291,7 +293,7 @@ def gradient_attribution(model, tokenizer, prompt):
 
 
 
-def calculate_attributes(prompt,component_sentences,model,tokenizer):
+def calculate_attributes(prompt,component_sentences,model,tokenizer,method):
     """
     Calculate the attributions for the given model and calculate_method.
 
@@ -302,7 +304,7 @@ def calculate_attributes(prompt,component_sentences,model,tokenizer):
     Returns:
     - attribution: The attributions calculated using the given calculate_method.
     """
-    calculate_method = "gradient"
+    calculate_method = method
     model_weight = False
     if calculate_method == "perturbation":
         attribution,target,time,gpu_memory_usage = perturbation_attribution(model, tokenizer, prompt=prompt)
@@ -315,19 +317,25 @@ def calculate_attributes(prompt,component_sentences,model,tokenizer):
         words_importance = calculate_word_scores(prompt, attribution)
         component_importance = calculate_component_scores(words_importance.get('tokens'), component_sentences)
         return attribution, words_importance, component_importance, target,time,gpu_memory_usage
+    elif calculate_method == "top_k_perturbation":
+        attribution,target,time,gpu_memory_usage = perturbation_attribution_top_k(model, tokenizer, prompt=prompt)
+        words_importance = calculate_word_scores(prompt, attribution)
+        component_importance = calculate_component_scores(words_importance.get('tokens'), component_sentences)
+        return attribution, words_importance, component_importance, target,time,gpu_memory_usage
+
     if model_weight:
         pass
     else:
         pass
-def run_initial_inference(start, end,model,tokenizer):
+def run_initial_inference(start, end,model,tokenizer,method):
     df = load_and_preprocess([start,end])
     print(len(df))
     data = []
 
     for ind, example in enumerate(df.select(range(len(df)-1))):
 
-            token, word, component, real_output,exec_time,gpu_memory_usage = calculate_attributes(example['sentence'], example['component_range'],model,tokenizer)
-            print("component----------->",component[2])
+            token, word, component, real_output,exec_time,gpu_memory_usage = calculate_attributes(example['sentence'], example['component_range'],model,tokenizer,method)
+            #print("component----------->",component[2])
             if token is not None:
                 data.append(
                     {'prompt': example['sentence'], "real_output": real_output, "token_level": token, "word_level": word,
@@ -372,14 +380,13 @@ def run_peturbed_inference(df, model, tokenizer):
     print("sentence has done!")
     return df
 
-
-if __name__ == "__main__":
+def main(method):
     start = 45000
-    end = start +5
+    end = start +100
 
     model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
-    method = "gradient"
-    inference_df = run_initial_inference(start=start,end=end,model=model,tokenizer=tokenizer)
+   # method = "gradient"
+    inference_df = run_initial_inference(start=start,end=end,model=model,tokenizer=tokenizer,method)
     inference_df.to_pickle(f"{start}_{end}_{method}_new_inferenced_df.pkl")
     print("\ndone the inference")
 
@@ -408,4 +415,9 @@ if __name__ == "__main__":
     perturbed_inferenced_df = run_peturbed_inference(reconstructed_df, model, tokenizer)
     perturbed_inferenced_df.to_pickle(f"{start}_{end}_{method}_new_perturbed_inferenced_df.pkl")
     print("\n done the reconstructed inference data")
+if __name__ == "__main__":
+    # main("gradient")
+    # main("perturbation")
+    main("top_k_perturbation")
+
 
