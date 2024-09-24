@@ -221,10 +221,11 @@ def perturbation_attribution(model, tokenizer, prompt,**kwargs):
     )
     attr_res = llm_attr.attribute(inp, target=target)
     gpu_memory_usage = torch.cuda.max_memory_allocated(device=0)
-    gpu_memory_usage = gpu_memory_usage/1024/1024
+    gpu_memory_usage = gpu_memory_usage/1024/1024/1204
     print(f"GPU Memory Usage: {gpu_memory_usage} GB")
     real_attr_res = attr_res.token_attr.cpu().detach().numpy()
     real_attr_res = np.absolute(real_attr_res)
+    real_attr_res = np.sum(real_attr_res,axis=0)
     labels = attr_res.input_tokens
     newer_sum_normalized_array = real_attr_res / np.sum(real_attr_res)
     final_attributes_dict = [{
