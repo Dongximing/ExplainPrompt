@@ -23,7 +23,7 @@ Article headline: {headline}"""
 
 def get_completion(
         messages: list[dict[str, str]],
-        model: str = "gpt-turbo-3.5",
+        model: str = "gpt-turbo-3.5-0125",
         max_tokens=500,
         temperature=0,
         stop=None,
@@ -52,6 +52,8 @@ def get_completion(
 
 def inference_openai(sentences):
     list_top20_logprobs = []
+    encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
+    output_cost = 0
     for i, sentence in enumerate(sentences):
         if i == 0:
             top_logprobs = 1
@@ -72,13 +74,16 @@ def inference_openai(sentences):
             data.token: {tp.token: tp.logprob for tp in data.top_logprobs}
             for data in top_twenty_logprobs.content
         }
+        output_cost += len(encoding.encode(response))
         # print(f"\n token_dict {token_dict}")
         list_top20_logprobs.append(token_dict)
 
-    return list_top20_logprobs, response
+    return list_top20_logprobs, response, output_cost
 
 def infer_openai_without_logits(sentences):
     generate_sentences  = []
+    encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
+    output_cost = 0
     for sentence in sentences:
         API_RESPONSE = get_completion(
             [{"role": "user", "content": sentence}],
@@ -86,8 +91,9 @@ def infer_openai_without_logits(sentences):
             logprobs=False,
         )
         response = API_RESPONSE.choices[0].message.content
+        output_cost += len(encoding.encode(response))
         generate_sentences.append(response)
-    return generate_sentences
+    return generate_sentences,output_cost
 
 
 def mask_each_tokens_for_openai(prompt):
@@ -102,12 +108,14 @@ def mask_each_tokens_for_openai(prompt):
     tokens = encoding.encode(prompt)
     masked_lists = [tokens[:i] + tokens[i + 1:] for i in range(len(tokens))]
     masked_sentences = []
+    total_input = 0
     for masked_list in masked_lists:
+        total_input += len(masked_list)
         masked_sentence = encoding.decode(masked_list)
         masked_sentences.append(masked_sentence)
     masked_sentences.insert(0, prompt)
     encoded_prompt = [encoding.decode_single_token_bytes(token) for token in tokens]
-    return masked_sentences, encoded_prompt
+    return masked_sentences, encoded_prompt,total_input
 
 
 def preprocess_baseline(baseline):
@@ -238,45 +246,57 @@ def analyze_important_words(probabilities, encoded_prompt):
 
 def calculate(prompt, component_sentences):
     try:
-        candidates, encoded_prompt = mask_each_tokens_for_openai(prompt)
-        total_problogits, response = inference_openai(candidates)
+        import time
+        start_time = time.time()
+        candidates, encoded_prompt,total_input = mask_each_tokens_for_openai(prompt)
+        total_problogits, response,total_output = inference_openai(candidates)
+        end_time = time.time()
         tokens_importance = analyze_important_words(total_problogits, encoded_prompt)
         words_importance = calculate_word_scores(prompt, tokens_importance)
         component_importance = calculate_component_scores(words_importance.get('tokens'), component_sentences)
-        return tokens_importance, words_importance, component_importance, response
+        return tokens_importance, words_importance, component_importance, response,end_time-start_time,total_input,total_output
     except:
-        return None, None, None, None
+        return None, None, None, None,None, None, None
 def calculate_discretize(prompt, component_sentences):
     try:
-        candidates, encoded_prompt = mask_each_tokens_for_openai(prompt)
-        response = infer_openai_without_logits(candidates)
+        import time
+        start_time = time.time()
+        candidates, encoded_prompt,total_input = mask_each_tokens_for_openai(prompt)
+        response,output_cost = infer_openai_without_logits(candidates)
+        end_time = time.time()
         tokens_importance = discretize_logits_method(response[0], response[1:], encoded_prompt)
         words_importance = calculate_word_scores(prompt, tokens_importance)
         component_importance = calculate_component_scores(words_importance.get('tokens'), component_sentences)
-        return tokens_importance, words_importance, component_importance, response[0]
+        return tokens_importance, words_importance, component_importance, response[0], end_time-start_time, total_input,output_cost
     except:
-        return None, None, None, None
+        return None, None, None, None.None, None, None
 
 def calculate_similarity(prompt, component_sentences):
     try:
-        candidates, encoded_prompt = mask_each_tokens_for_openai(prompt)
-        response = infer_openai_without_logits(candidates)
-        print(response)
+        import time
+        start_time = time.time()
+        candidates, encoded_prompt,total_input = mask_each_tokens_for_openai(prompt)
+        response,output_cost = infer_openai_without_logits(candidates)
+        end_time = time.time()
         tokens_importance = similarity_method(response[0], response[1:],encoded_prompt)
         words_importance = calculate_word_scores(prompt, tokens_importance)
         component_importance = calculate_component_scores(words_importance.get('tokens'), component_sentences)
-        return tokens_importance, words_importance, component_importance, response[0]
+        return tokens_importance, words_importance, component_importance, response[0],end_time-start_time,total_input, output_cost
     except:
-        return None, None, None, None
+        return None, None, None, None,None, None, None
 
-def run_initial_inference(start, end):
+def run_initial_inference(start, end,method):
     df = load_and_preprocess([start,end])
     print(len(df))
     data = []
     for ind, example in enumerate(df.select(range(len(df)-1))):
-
-            token, word, component, real_output = calculate_similarity(example['sentence'], example['component_range'])
-            print("id----------->",ind)
+            if method == "similarity":
+                token, word, component, real_output,exec_time, total_input, output_cost = calculate_similarity(example['sentence'], example['component_range'])
+            elif method == "discretize":
+                token, word, component, real_output,exec_time, total_input, output_cost = calculate_discretize(example['sentence'], example['component_range'])
+            elif method == "logits":
+                token, word, component, real_output,exec_time, total_input, output_cost = calculate(example['sentence'], example['component_range'])
+            print("id----------->",ind,exec_time, total_input, output_cost)
             if token is not None:
                 data.append(
                     {'prompt': example['sentence'], "real_output": real_output, "token_level": token, "word_level": word,
@@ -286,7 +306,11 @@ def run_initial_inference(start, end):
                      'query': example['query'],
                      "component_range": example['component_range'],  # TODO: not a list, its a dict
                      "instruction_weight": component[0].get("instruction"),
-                     "query_weight": component[0].get("query")
+                     "query_weight": component[0].get("query"),
+                     "exec_time": exec_time,
+                     "input_cost": total_input,
+                     "output_cost": output_cost,
+                     "total_cost": total_input+output_cost
 
                      }
                 )
@@ -297,7 +321,7 @@ def run_initial_inference(start, end):
     return result
 def only_calculate_results(prompt):
     
-    _, response = inference_openai([prompt])
+    _, response,output_cost = inference_openai([prompt])
     return response
 
 
@@ -321,75 +345,43 @@ def run_peturbed_inference(df, results_path, column_names=None):
 
     return df
 
+def main(method):
+    start = 45000
+    end = start + 100
+    inference_df = run_initial_inference(start=start, end=end,method=method)
+    inference_df.to_pickle(f"{start}_{end}_{method}_inferenced_df.pkl")
+    print("\ndone the inference")
+
+    with open(f"{start}_{end}_{method}_inferenced_df.pkl", "rb") as f:
+        postprocess_inferenced_df = pickle.load(f)
+    postprocess_inferenced_df = postproces_inferenced(postprocess_inferenced_df)
+    postprocess_inferenced_df.to_pickle(f"{start}_{end}_{method}_postprocess_inferenced_df.pkl")
+    print("\n done the postprocess")
+
+    with open(f"{start}_{end}_{method}_postprocess_inferenced_df.pkl", "rb") as f:
+        postprocess_inferenced_df = pickle.load(f)
+
+    perturbed_df = run_peturbation(postprocess_inferenced_df.copy())
+    perturbed_df.to_pickle(f"{start}_{end}_{method}_perturbed_df.pkl")
+    print("\n done the perturbed")
+
+    with open(f"{start}_{end}_{method}_perturbed_df.pkl", "rb") as f:
+        reconstructed_df = pickle.load(f)
+    reconstructed_df = do_peturbed_reconstruct(reconstructed_df.copy(), None)
+    reconstructed_df.to_pickle(f"{start}_{end}_{method}_reconstructed_df.pkl")
+    print("\n done the reconstructed")
+
+    with open(f"{start}_{end}_{method}_reconstructed_df.pkl", "rb") as f:
+        reconstructed_df = pickle.load(f)
+    perturbed_inferenced_df = run_peturbed_inference(reconstructed_df, results_path=None, column_names=None)
+    perturbed_inferenced_df.to_pickle(f"{start}_{end}_{method}_perturbed_inferenced_df.pkl")
+    print("\n done the reconstructed inference data")
+
 
 if __name__ == "__main__":
-    method = "similarity"
-
-    if method == "similarity":
-        start = 45050
-        end = start + 100
-        inference_df = run_initial_inference(start=start,end=end)
-        inference_df.to_pickle(f"{start}_{end}_similarity_inferenced_df.pkl")
-        print("\ndone the inference")
-
-        with open(f"{start}_{end}_similarity_inferenced_df.pkl", "rb") as f:
-            postprocess_inferenced_df = pickle.load(f)
-        postprocess_inferenced_df = postproces_inferenced(postprocess_inferenced_df)
-        postprocess_inferenced_df.to_pickle(f"{start}_{end}_similarity_postprocess_inferenced_df.pkl")
-        print("\n done the postprocess")
-
-
-        with open(f"{start}_{end}_similarity_postprocess_inferenced_df.pkl", "rb") as f:
-            postprocess_inferenced_df = pickle.load(f)
-
-        perturbed_df = run_peturbation(postprocess_inferenced_df.copy())
-        perturbed_df.to_pickle(f"{start}_{end}_similarity_perturbed_df.pkl")
-        print("\n done the perturbed")
-
-        with open(f"{start}_{end}_similarity_perturbed_df.pkl", "rb") as f:
-            reconstructed_df = pickle.load(f)
-        reconstructed_df = do_peturbed_reconstruct(reconstructed_df.copy(), None)
-        reconstructed_df.to_pickle(f"{start}_{end}_similarity_reconstructed_df.pkl")
-        print("\n done the reconstructed")
-
-        with open(f"{start}_{end}_similarity_reconstructed_df.pkl", "rb") as f:
-            reconstructed_df = pickle.load(f)
-        perturbed_inferenced_df = run_peturbed_inference(reconstructed_df, results_path=None, column_names=None)
-        perturbed_inferenced_df.to_pickle(f"{start}_{end}_similarity_perturbed_inferenced_df.pkl")
-        print("\n done the reconstructed inference data")
-    else:
-
-        start = 45303
-        end = start + 100
-        inference_df = run_initial_inference(start=start, end=end)
-        inference_df.to_pickle(f"{start}_{end}_discretize_inferenced_df.pkl")
-        print("\ndone the inference")
-
-        with open(f"{start}_{end}_discretize_inferenced_df.pkl", "rb") as f:
-            postprocess_inferenced_df = pickle.load(f)
-        postprocess_inferenced_df = postproces_inferenced(postprocess_inferenced_df)
-        postprocess_inferenced_df.to_pickle(f"{start}_{end}_discretize_postprocess_inferenced_df.pkl")
-        print("\n done the postprocess")
-
-        with open(f"{start}_{end}_discretize_postprocess_inferenced_df.pkl", "rb") as f:
-            postprocess_inferenced_df = pickle.load(f)
-
-        perturbed_df = run_peturbation(postprocess_inferenced_df.copy())
-        perturbed_df.to_pickle(f"{start}_{end}_discretize_perturbed_df.pkl")
-        print("\n done the perturbed")
-
-        with open(f"{start}_{end}_discretize_perturbed_df.pkl", "rb") as f:
-            reconstructed_df = pickle.load(f)
-        reconstructed_df = do_peturbed_reconstruct(reconstructed_df.copy(), None)
-        reconstructed_df.to_pickle(f"{start}_{end}_discretize_reconstructed_df.pkl")
-        print("\n done the reconstructed")
-
-        with open(f"{start}_{end}_discretize_reconstructed_df.pkl", "rb") as f:
-            reconstructed_df = pickle.load(f)
-        perturbed_inferenced_df = run_peturbed_inference(reconstructed_df, results_path=None, column_names=None)
-        perturbed_inferenced_df.to_pickle(f"{start}_{end}_discretize_perturbed_inferenced_df.pkl")
-        print("\n done the reconstructed inference data")
-
+   # main("similarity")
+    main("discretize")
+    main("logits")
 
 
 

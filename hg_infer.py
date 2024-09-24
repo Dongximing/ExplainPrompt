@@ -242,7 +242,8 @@ def perturbation_attribution(model, tokenizer, prompt):
     },target, end_time - start_time, gpu_memory_usage
 
 
-
+def discretize(model, tokenizer, prompt):
+    pass
 
 
 def gradient_attribution(model, tokenizer, prompt):
@@ -322,11 +323,17 @@ def calculate_attributes(prompt,component_sentences,model,tokenizer,method):
         words_importance = calculate_word_scores(prompt, attribution)
         component_importance = calculate_component_scores(words_importance.get('tokens'), component_sentences)
         return attribution, words_importance, component_importance, target,time,gpu_memory_usage
-
-    if model_weight:
-        pass
     else:
-        pass
+        attribution,target,time,gpu_memory_usage = perturbation_attribution_top_k(model, tokenizer, prompt=prompt)
+        words_importance = calculate_word_scores(prompt, attribution)
+        component_importance = calculate_component_scores(words_importance.get('tokens'), component_sentences)
+        return attribution, words_importance, component_importance, target,time,gpu_memory_usage
+
+
+    # if model_weight:
+    #     pass
+    # else:
+    #     pass
 def run_initial_inference(start, end,model,tokenizer,method):
     df = load_and_preprocess([start,end])
     print(len(df))
@@ -416,8 +423,8 @@ def main(method):
     perturbed_inferenced_df.to_pickle(f"{start}_{end}_{method}_new_perturbed_inferenced_df.pkl")
     print("\n done the reconstructed inference data")
 if __name__ == "__main__":
-    # main("gradient")
-    # main("perturbation")
-    main("top_k_perturbation")
+    main("gradient")
+    main("perturbation")
+    #main("top_k_perturbation")
 
 
