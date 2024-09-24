@@ -243,7 +243,7 @@ def perturbation_attribution(model, tokenizer, prompt,**kwargs):
 
 
 
-def gradient_attribution(model, tokenizer, prompt, kwargs):
+def gradient_attribution(model, tokenizer, prompt):
     """
     Calculate attribution using gradient method.
 
