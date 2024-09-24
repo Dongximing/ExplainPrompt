@@ -302,7 +302,7 @@ def calculate_attributes(prompt,component_sentences,model,tokenizer):
     Returns:
     - attribution: The attributions calculated using the given calculate_method.
     """
-    calculate_method = "perturbation"
+    calculate_method = "gradient"
     model_weight = False
     if calculate_method == "perturbation":
         attribution,target,time,gpu_memory_usage = perturbation_attribution(model, tokenizer, prompt=prompt)
