@@ -59,7 +59,7 @@ def inference_openai(sentences):
             top_logprobs = 20  # if we want to get top 20 logprobs, otherwise 20
         API_RESPONSE = get_completion(
             [{"role": "user", "content": sentence}],
-            model="gpt-3.5-turbo-0125",
+            model="gpt-3.5-turbo",
             logprobs=True,
             top_logprobs=top_logprobs,
         )
@@ -76,7 +76,18 @@ def inference_openai(sentences):
         list_top20_logprobs.append(token_dict)
 
     return list_top20_logprobs, response
-    # print(f"\ntop_twenty_logprobs: {top_twenty_logprobs}")
+
+def infer_openai_without_logits(sentences):
+    generate_sentences  = []
+    for sentence in sentences:
+        API_RESPONSE = get_completion(
+            [{"role": "user", "content": sentence}],
+            model="gpt-3.5-turbo",
+            logprobs=False,
+        )
+        response = API_RESPONSE.choices[0].message.content
+        generate_sentences.append(response)
+    return generate_sentences
 
 
 def mask_each_tokens_for_openai(prompt):
@@ -130,17 +141,12 @@ def calculate_importance_score_tokens(baseline, masked_words, encoded_prompt):
                 final_attribute.append(prob)
         final_attributes.append(final_attribute)
     final_attributes = np.array(final_attributes)
-    # print(f"final_attributes{final_attributes}")
     k = len(final_attributes[0])
     sum_attributes = final_attributes.sum(axis=1) / k
     baseline_attribute = np.array([list(item.values())[0] for item in baseline])
     baseline_attribute = sum(baseline_attribute) / len(baseline_attribute)
-    #print(f"\nbaseline{baseline_attribute}")
     importance_scores = (1 - sum_attributes)
-    # print(f"\nimportance_scores{importance_scores}")
     norm_scores = importance_scores / sum(importance_scores)
-    # print(f"\nfinal_attributes  {baseline}")
-    # print(f"\nfinal_    {encoded_prompt}")
     assert (len(norm_scores) == len(encoded_prompt))
     final_attributes_dict = [{
         'token': strip_tokenizer_prefix(encoded_prompt[i]),
@@ -148,10 +154,75 @@ def calculate_importance_score_tokens(baseline, masked_words, encoded_prompt):
         'value': norm_scores[i],
         'position': i
     } for i, item in enumerate(encoded_prompt)]
-    # print(f"\n baseline {final_attributes_dict}")
+    print(f"\n baseline {final_attributes_dict}")
     return {
         "tokens": final_attributes_dict
     }
+def get_embedding(text, model="text-embedding-3-small"):
+    text = text.replace("\n", " ")
+    return client.embeddings.create(input=[text], model=model).data[0].embedding
+
+
+def similarity_method(baseline,candidates,encoded_prompt):
+    """
+    Calculate the similarity between the baseline and candidates.
+    """
+
+    baseline_embedding = get_embedding(baseline)
+    print(f"\nbaseline_embedding{baseline_embedding}")
+    candidate_embeddings = [get_embedding(candidate) for candidate in candidates]
+    similarities = []
+    for candidate_embedding in candidate_embeddings:
+        similarity = np.dot(baseline_embedding, candidate_embedding) / (np.linalg.norm(baseline_embedding) * np.linalg.norm(candidate_embedding))
+        similarities.append(1-similarity)
+    print(f"\nsimilarities{similarities}")
+    norm_scores = similarities/ sum(similarities)
+    print(f"\nsimilarities{norm_scores}")
+
+    final_attributes_dict = [{
+        'token': strip_tokenizer_prefix(encoded_prompt[i]),
+        'type': 'input',
+        'value': norm_scores[i],
+        'position': i
+    } for i, item in enumerate(encoded_prompt)]
+    print(f"\n baseline {final_attributes_dict}")
+    return {
+        "tokens": final_attributes_dict
+    }
+def do_comparison(cleaned_baseline, candidate_token):
+    comparison_set = set(cleaned_baseline)
+    candidate_set = set(candidate_token)
+    marks = [1 if token in candidate_set else 0 for token in comparison_set]
+    average = sum(marks) / len(comparison_set)
+    return average
+
+def discretize_logits_method(baseline, candidates, encoded_prompt):
+
+    encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
+    baseline_tokens = encoding.encode(baseline)
+    baseline_tokens = [encoding.decode_single_token_bytes(token) for token in baseline_tokens]
+    print(f"baseline_tokens{baseline_tokens}")
+    cleaned_baseline =[strip_tokenizer_prefix(token) for token in baseline_tokens]
+    scores = []
+    for candidate in candidates:
+        candidate_token = encoding.encode(candidate)
+        candidate_token = [encoding.decode_single_token_bytes(token) for token in candidate_token]
+        cleaned_candidate = [strip_tokenizer_prefix(token) for token in candidate_token]
+        score = do_comparison(cleaned_baseline, cleaned_candidate)
+        scores.append(score)
+    scores = np.array(scores)
+    norm_scores = scores/np.sum(scores)
+    final_attributes_dict = [{
+        'token': strip_tokenizer_prefix(encoded_prompt[i]),
+        'type': 'input',
+        'value': norm_scores[i],
+        'position': i
+    } for i, item in enumerate(encoded_prompt)]
+    print(f"\n baseline {final_attributes_dict}")
+    return {
+        "tokens": final_attributes_dict
+    }
+
 
 
 def analyze_important_words(probabilities, encoded_prompt):
@@ -160,9 +231,6 @@ def analyze_important_words(probabilities, encoded_prompt):
     """
     baseline = preprocess_baseline(probabilities[0])
     masked_words = preprocess_baseline(probabilities[1:])
-
-    # print(f"baseline {masked_words}")
-
     importance_score_tokens = calculate_importance_score_tokens(baseline, masked_words, encoded_prompt)
 
     return importance_score_tokens
@@ -170,7 +238,6 @@ def analyze_important_words(probabilities, encoded_prompt):
 
 def calculate(prompt, component_sentences):
     try:
-        print("prompt",prompt)
         candidates, encoded_prompt = mask_each_tokens_for_openai(prompt)
         total_problogits, response = inference_openai(candidates)
         tokens_importance = analyze_important_words(total_problogits, encoded_prompt)
@@ -179,7 +246,28 @@ def calculate(prompt, component_sentences):
         return tokens_importance, words_importance, component_importance, response
     except:
         return None, None, None, None
+def calculate_discretize(prompt, component_sentences):
+    try:
+        candidates, encoded_prompt = mask_each_tokens_for_openai(prompt)
+        response = infer_openai_without_logits(candidates)
+        tokens_importance = discretize_logits_method(response[0], response[1:], encoded_prompt)
+        words_importance = calculate_word_scores(prompt, tokens_importance)
+        component_importance = calculate_component_scores(words_importance.get('tokens'), component_sentences)
+        return tokens_importance, words_importance, component_importance, response[0]
+    except:
+        return None, None, None, None
 
+def calculate_similarity(prompt, component_sentences):
+    try:
+        candidates, encoded_prompt = mask_each_tokens_for_openai(prompt)
+        response = infer_openai_without_logits(candidates)
+        print(response)
+        tokens_importance = similarity_method(response[0], response[1:],encoded_prompt)
+        words_importance = calculate_word_scores(prompt, tokens_importance)
+        component_importance = calculate_component_scores(words_importance.get('tokens'), component_sentences)
+        return tokens_importance, words_importance, component_importance, response[0]
+    except:
+        return None, None, None, None
 
 def run_initial_inference(start, end):
     df = load_and_preprocess([start,end])
@@ -187,8 +275,8 @@ def run_initial_inference(start, end):
     data = []
     for ind, example in enumerate(df.select(range(len(df)-1))):
 
-            token, word, component, real_output = calculate(example['sentence'], example['component_range'])
-            print("component----------->",component[2])
+            token, word, component, real_output = calculate_similarity(example['sentence'], example['component_range'])
+            print("id----------->",ind)
             if token is not None:
                 data.append(
                     {'prompt': example['sentence'], "real_output": real_output, "token_level": token, "word_level": word,
@@ -235,39 +323,72 @@ def run_peturbed_inference(df, results_path, column_names=None):
 
 
 if __name__ == "__main__":
-    start = 46500
-    end = start +500
-    inference_df = run_initial_inference(start=start,end=end)
-    inference_df.to_pickle(f"{start}_{end}inferenced_df.pkl")
-    print("\ndone the inference")
+    method = "similarity"
 
-    with open(f"{start}_{end}inferenced_df.pkl", "rb") as f:
-        postprocess_inferenced_df = pickle.load(f)
-    postprocess_inferenced_df = postproces_inferenced(postprocess_inferenced_df)
-    postprocess_inferenced_df.to_pickle(f"{start}_{end}postprocess_inferenced_df.pkl")
-    print("\n done the postprocess")
+    if method == "similarity":
+        start = 45050
+        end = start + 5
+        inference_df = run_initial_inference(start=start,end=end)
+        inference_df.to_pickle(f"{start}_{end}_similarity_inferenced_df.pkl")
+        print("\ndone the inference")
 
-
-    with open(f"{start}_{end}postprocess_inferenced_df.pkl", "rb") as f:
-        postprocess_inferenced_df = pickle.load(f)
-
-    perturbed_df = run_peturbation(postprocess_inferenced_df.copy())
-    perturbed_df.to_pickle(f"{start}_{end}perturbed_df.pkl")
-    print("\n done the perturbed")
-
-    with open(f"{start}_{end}perturbed_df.pkl", "rb") as f:
-        reconstructed_df = pickle.load(f)
-    reconstructed_df = do_peturbed_reconstruct(reconstructed_df.copy(), None)
-    reconstructed_df.to_pickle(f"{start}_{end}reconstructed_df.pkl")
-    print("\n done the reconstructed")
-
-    with open(f"{start}_{end}reconstructed_df.pkl", "rb") as f:
-        reconstructed_df = pickle.load(f)
-    perturbed_inferenced_df = run_peturbed_inference(reconstructed_df, results_path=None, column_names=None)
-    perturbed_inferenced_df.to_pickle(f"{start}_{end}perturbed_inferenced_df.pkl")
-    print("\n done the reconstructed inference data")
+        with open(f"{start}_{end}_similarity_inferenced_df.pkl", "rb") as f:
+            postprocess_inferenced_df = pickle.load(f)
+        postprocess_inferenced_df = postproces_inferenced(postprocess_inferenced_df)
+        postprocess_inferenced_df.to_pickle(f"{start}_{end}_similarity_postprocess_inferenced_df.pkl")
+        print("\n done the postprocess")
 
 
+        with open(f"{start}_{end}_similarity_postprocess_inferenced_df.pkl", "rb") as f:
+            postprocess_inferenced_df = pickle.load(f)
+
+        perturbed_df = run_peturbation(postprocess_inferenced_df.copy())
+        perturbed_df.to_pickle(f"{start}_{end}_similarity_perturbed_df.pkl")
+        print("\n done the perturbed")
+
+        with open(f"{start}_{end}_similarity_perturbed_df.pkl", "rb") as f:
+            reconstructed_df = pickle.load(f)
+        reconstructed_df = do_peturbed_reconstruct(reconstructed_df.copy(), None)
+        reconstructed_df.to_pickle(f"{start}_{end}_similarity_reconstructed_df.pkl")
+        print("\n done the reconstructed")
+
+        with open(f"{start}_{end}_similarity_reconstructed_df.pkl", "rb") as f:
+            reconstructed_df = pickle.load(f)
+        perturbed_inferenced_df = run_peturbed_inference(reconstructed_df, results_path=None, column_names=None)
+        perturbed_inferenced_df.to_pickle(f"{start}_{end}_similarity_perturbed_inferenced_df.pkl")
+        print("\n done the reconstructed inference data")
+    else:
+
+        start = 45003
+        end = start + 300
+        inference_df = run_initial_inference(start=start, end=end)
+        inference_df.to_pickle(f"{start}_{end}_discretize_inferenced_df.pkl")
+        print("\ndone the inference")
+
+        with open(f"{start}_{end}_discretize_inferenced_df.pkl", "rb") as f:
+            postprocess_inferenced_df = pickle.load(f)
+        postprocess_inferenced_df = postproces_inferenced(postprocess_inferenced_df)
+        postprocess_inferenced_df.to_pickle(f"{start}_{end}_discretize_postprocess_inferenced_df.pkl")
+        print("\n done the postprocess")
+
+        with open(f"{start}_{end}_discretize_postprocess_inferenced_df.pkl", "rb") as f:
+            postprocess_inferenced_df = pickle.load(f)
+
+        perturbed_df = run_peturbation(postprocess_inferenced_df.copy())
+        perturbed_df.to_pickle(f"{start}_{end}_discretize_perturbed_df.pkl")
+        print("\n done the perturbed")
+
+        with open(f"{start}_{end}_discretize_perturbed_df.pkl", "rb") as f:
+            reconstructed_df = pickle.load(f)
+        reconstructed_df = do_peturbed_reconstruct(reconstructed_df.copy(), None)
+        reconstructed_df.to_pickle(f"{start}_{end}_discretize_reconstructed_df.pkl")
+        print("\n done the reconstructed")
+
+        with open(f"{start}_{end}_discretize_reconstructed_df.pkl", "rb") as f:
+            reconstructed_df = pickle.load(f)
+        perturbed_inferenced_df = run_peturbed_inference(reconstructed_df, results_path=None, column_names=None)
+        perturbed_inferenced_df.to_pickle(f"{start}_{end}_discretize_perturbed_inferenced_df.pkl")
+        print("\n done the reconstructed inference data")
 
 
 

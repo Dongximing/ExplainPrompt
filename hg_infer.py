@@ -236,7 +236,7 @@ def gradient_attribution(model, tokenizer, prompt, kwargs):
         'value': newer_sum_normalized_array[i],
         'position': i
     } for i, item in enumerate(labels)]
-    print(f"{final_attributes_dict}")
+    #print(f"{final_attributes_dict}")
     return {
         "tokens": final_attributes_dict
     }, target
