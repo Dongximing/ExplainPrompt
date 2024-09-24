@@ -82,7 +82,7 @@ def infer_openai_without_logits(sentences):
     for sentence in sentences:
         API_RESPONSE = get_completion(
             [{"role": "user", "content": sentence}],
-            model="gpt-3.5-turbo",
+            model="gpt-3.5-turbo-0125",
             logprobs=False,
         )
         response = API_RESPONSE.choices[0].message.content
@@ -201,7 +201,7 @@ def discretize_logits_method(baseline, candidates, encoded_prompt):
     encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
     baseline_tokens = encoding.encode(baseline)
     baseline_tokens = [encoding.decode_single_token_bytes(token) for token in baseline_tokens]
-    print(f"baseline_tokens{baseline_tokens}")
+    #print(f"baseline_tokens{baseline_tokens}")
     cleaned_baseline =[strip_tokenizer_prefix(token) for token in baseline_tokens]
     scores = []
     for candidate in candidates:
@@ -209,7 +209,7 @@ def discretize_logits_method(baseline, candidates, encoded_prompt):
         candidate_token = [encoding.decode_single_token_bytes(token) for token in candidate_token]
         cleaned_candidate = [strip_tokenizer_prefix(token) for token in candidate_token]
         score = do_comparison(cleaned_baseline, cleaned_candidate)
-        scores.append(score)
+        scores.append(1-score)
     scores = np.array(scores)
     norm_scores = scores/np.sum(scores)
     final_attributes_dict = [{
@@ -218,7 +218,7 @@ def discretize_logits_method(baseline, candidates, encoded_prompt):
         'value': norm_scores[i],
         'position': i
     } for i, item in enumerate(encoded_prompt)]
-    print(f"\n baseline {final_attributes_dict}")
+    #print(f"\n baseline {final_attributes_dict}")
     return {
         "tokens": final_attributes_dict
     }
@@ -327,7 +327,7 @@ if __name__ == "__main__":
 
     if method == "similarity":
         start = 45050
-        end = start + 5
+        end = start + 100
         inference_df = run_initial_inference(start=start,end=end)
         inference_df.to_pickle(f"{start}_{end}_similarity_inferenced_df.pkl")
         print("\ndone the inference")
@@ -359,8 +359,8 @@ if __name__ == "__main__":
         print("\n done the reconstructed inference data")
     else:
 
-        start = 45003
-        end = start + 300
+        start = 45303
+        end = start + 100
         inference_df = run_initial_inference(start=start, end=end)
         inference_df.to_pickle(f"{start}_{end}_discretize_inferenced_df.pkl")
         print("\ndone the inference")
