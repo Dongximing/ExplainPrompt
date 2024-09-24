@@ -256,6 +256,8 @@ def gradient_attribution(model, tokenizer, prompt, kwargs):
     Returns:
     - attribution: The attributions calculated using the gradient method.
     """
+    import time
+    start_time = time.time()
     target = generate_text(model, tokenizer, prompt)
     emb_layer = model.get_submodule("model.embed_tokens")
     ig = LayerIntegratedGradients(model, emb_layer)
@@ -266,6 +268,7 @@ def gradient_attribution(model, tokenizer, prompt, kwargs):
         skip_tokens=[1],  # skip the special token for the start of the text <s>
     )
     attr_res = llm_attr.attribute(inp, target=target)
+    gpu_memory_usage = torch.cuda.max_memory_allocated(device=0)
     real_attr_res = attr_res.token_attr.cpu().detach().numpy()
     real_attr_res = np.absolute(real_attr_res)
     real_attr_res = np.sum(real_attr_res, axis=0)
@@ -277,10 +280,13 @@ def gradient_attribution(model, tokenizer, prompt, kwargs):
         'value': newer_sum_normalized_array[i],
         'position': i
     } for i, item in enumerate(labels)]
+    gpu_memory_usage = gpu_memory_usage/1024/1024/1204
+    print(f"GPU Memory Usage: {gpu_memory_usage} GB")
+    end_time = time.time()
     #print(f"{final_attributes_dict}")
     return {
         "tokens": final_attributes_dict
-    }, target
+    }, target, end_time - start_time, gpu_memory_usage
 
 
 
@@ -305,7 +311,10 @@ def calculate_attributes(prompt,component_sentences,model,tokenizer):
         return attribution, words_importance, component_importance, target,time,gpu_memory_usage
 
     elif calculate_method == "gradient":
-        attribution = gradient_attribution(model, tokenizer, prompt=prompt)
+        attribution,target,time,gpu_memory_usage = gradient_attribution(model, tokenizer, prompt=prompt)
+        words_importance = calculate_word_scores(prompt, attribution)
+        component_importance = calculate_component_scores(words_importance.get('tokens'), component_sentences)
+        return attribution, words_importance, component_importance, target,time,gpu_memory_usage
     if model_weight:
         pass
     else:
@@ -341,9 +350,7 @@ def run_initial_inference(start, end,model,tokenizer):
 
 
 def only_calculate_results(prompt,model, tokenizer):
-    #print(prompt)
     response = generate_text(model, tokenizer,prompt)
-    #print(response)
     return response
 
 
@@ -371,7 +378,7 @@ if __name__ == "__main__":
     end = start +5
 
     model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
-    method = "perturbation"
+    method = "gradient"
     inference_df = run_initial_inference(start=start,end=end,model=model,tokenizer=tokenizer)
     inference_df.to_pickle(f"{start}_{end}_{method}_new_inferenced_df.pkl")
     print("\ndone the inference")
