@@ -76,7 +76,7 @@ def run_peturbation(df):
     # Make a deep copy of required columns to avoid modifying the original DataFrame.
     _df = copy.deepcopy(df[['instructions_tokens', 'query_tokens']])
 
-    for pct in [0.2]:  # [0.1, 0.2, 0.3, 0.4]:
+    for pct in [0.25]:  # [0.1, 0.2, 0.3, 0.4]:
         df[f'instruction_token_top_{pct}_peturbed'] = _df['instructions_tokens'].apply(
             lambda lst: modify_tokens(copy.deepcopy(lst), model_s, is_top=True, peturbation_level=pct)
         )

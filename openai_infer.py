@@ -269,7 +269,7 @@ def calculate_discretize(prompt, component_sentences):
         component_importance = calculate_component_scores(words_importance.get('tokens'), component_sentences)
         return tokens_importance, words_importance, component_importance, response[0], end_time-start_time, total_input,output_cost
     except:
-        return None, None, None, None.None, None, None
+        return None, None, None, None,None, None, None
 
 def calculate_similarity(prompt, component_sentences):
     try:
@@ -379,9 +379,9 @@ def main(method):
 
 
 if __name__ == "__main__":
-   # main("similarity")
-    main("discretize")
-    main("logits")
+   main("similarity")
+   #  main("discretize")
+   #  main("logits")
 
 
 

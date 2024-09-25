@@ -270,7 +270,7 @@ def gradient_attribution(model, tokenizer, prompt):
         tokenizer,
         skip_tokens=[1],  # skip the special token for the start of the text <s>
     )
-    attr_res = llm_attr.attribute(inp, target=target,n_steps=10)
+    attr_res = llm_attr.attribute(inp, target=target,n_steps=20)
     gpu_memory_usage = torch.cuda.max_memory_allocated(device=0)
     real_attr_res = attr_res.token_attr.cpu().detach().numpy()
     real_attr_res = np.absolute(real_attr_res)
@@ -388,8 +388,8 @@ def run_peturbed_inference(df, model, tokenizer):
     return df
 
 def main(method):
-    start = 45000
-    end = start +100
+    start = 45100
+    end = start +200
 
     model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
    # method = "gradient"
@@ -424,7 +424,7 @@ def main(method):
     print("\n done the reconstructed inference data")
 if __name__ == "__main__":
     main("gradient")
-    main("perturbation")
+    #main("perturbation")
     #main("top_k_perturbation")
 
 
