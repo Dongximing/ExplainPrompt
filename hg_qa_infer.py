@@ -270,7 +270,7 @@ def gradient_attribution(model, tokenizer, prompt):
         tokenizer,
         skip_tokens=[1],  # skip the special token for the start of the text <s>
     )
-    attr_res = llm_attr.attribute(inp, target=target,n_steps=20)
+    attr_res = llm_attr.attribute(inp, target=target,n_steps=10)
     gpu_memory_usage = torch.cuda.max_memory_allocated(device=0)
     real_attr_res = attr_res.token_attr.cpu().detach().numpy()
     real_attr_res = np.absolute(real_attr_res)
@@ -346,7 +346,6 @@ def run_initial_inference(start, end,model,tokenizer,method):
             if token is not None:
                 data.append(
                     {'prompt': example['prefix_query'], "real_output": real_output, "token_level": token, "word_level": word,
-                     "label": example['label'],
                      "component_level": component,
                      'instruction': example['instruction'],
                      'query': example['query'],
