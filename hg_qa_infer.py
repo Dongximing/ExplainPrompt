@@ -392,7 +392,7 @@ def main(method):
 
 if __name__ == "__main__":
     main("gradient")
-    main("perturbation")
-    main("top_k_perturbation")
+    #main("perturbation")
+    #main("top_k_perturbation")
 
 
