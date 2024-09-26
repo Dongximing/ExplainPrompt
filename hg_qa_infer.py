@@ -341,7 +341,7 @@ def run_initial_inference(start, end,model,tokenizer,method):
 
     for ind, example in enumerate(df.select(range(len(df)-1))):
 
-            token, word, component, real_output,exec_time,gpu_memory_usage = calculate_attributes(example['sentence'], example['component_range'],model,tokenizer,method)
+            token, word, component, real_output,exec_time,gpu_memory_usage = calculate_attributes(example['prefix_query'], example['component_range'],model,tokenizer,method)
 
             if token is not None:
                 data.append(
