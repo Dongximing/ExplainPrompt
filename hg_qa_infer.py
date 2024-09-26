@@ -61,9 +61,10 @@ def generate_text(model, tokenizer,input):
     model_input = tokenizer(input, return_tensors="pt", padding=True, truncation=True).to("cuda")
     model.eval()
     with torch.no_grad():
-        output_ids = model.generate(model_input["input_ids"], max_new_tokens=2048,temperature=0.01)[0]
+        output_ids = model.generate(model_input["input_ids"], max_new_tokens=1024,temperature=0.01)[0]
         generated_tokens = output_ids[len(model_input["input_ids"][0]):]
         response = tokenizer.decode(generated_tokens, skip_special_tokens=True)
+    print(f"Generated text: {response}")
     return response
 
 
@@ -270,7 +271,7 @@ def gradient_attribution(model, tokenizer, prompt):
         tokenizer,
         skip_tokens=[1],  # skip the special token for the start of the text <s>
     )
-    attr_res = llm_attr.attribute(inp, target=target,n_steps=10)
+    attr_res = llm_attr.attribute(inp, target=target,n_steps=5)
     gpu_memory_usage = torch.cuda.max_memory_allocated(device=0)
     real_attr_res = attr_res.token_attr.cpu().detach().numpy()
     real_attr_res = np.absolute(real_attr_res)
