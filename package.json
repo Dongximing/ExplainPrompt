@@ -1,0 +1,88 @@
+{
+  "tokens": [
+    {
+      "position": 0,
+      "token": "What",
+      "type": "input",
+      "value": 0.06088173547935619
+    },
+    {
+      "position": 1,
+      "token": "grade",
+      "type": "input",
+      "value": 0.07627711686494053
+    },
+    {
+      "position": 2,
+      "token": "did",
+      "type": "input",
+      "value": 0.06578026592022393
+    },
+    {
+      "position": 3,
+      "token": "he",
+      "type": "input",
+      "value": 0.08117564730580826
+    },
+    {
+      "position": 4,
+      "token": "fail",
+      "type": "input",
+      "value": 0.086074177746676
+    },
+    {
+      "position": 5,
+      "token": "?",
+      "type": "input",
+      "value": 0.056682995101469555
+    },
+    {
+      "position": 6,
+      "token": "Respond",
+      "type": "input",
+      "value": 0.06717984604618615
+    },
+    {
+      "position": 7,
+      "token": "in",
+      "type": "input",
+      "value": 0.06088173547935619
+    },
+    {
+      "position": 8,
+      "token": "the",
+      "type": "input",
+      "value": 0.07067879636109167
+    },
+    {
+      "position": 9,
+      "token": "form",
+      "type": "input",
+      "value": 0.07837648705388384
+    },
+    {
+      "position": 10,
+      "token": "of",
+      "type": "input",
+      "value": 0.07697690692792164
+    },
+    {
+      "position": 11,
+      "token": "a",
+      "type": "input",
+      "value": 0.06927921623512948
+    },
+    {
+      "position": 12,
+      "token": "long",
+      "type": "input",
+      "value": 0.050384884534639615
+    },
+    {
+      "position": 13,
+      "token": "story",
+      "type": "input",
+      "value": 0.099370188943317
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-
+import bitsandbytes as bnb
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 import random
@@ -6,7 +6,7 @@ import sys
 import numpy as np
 import pandas as pd
 from utils import calculate_word_scores, calculate_component_scores, hg_strip_tokenizer_prefix, postproces_inferenced
-from data_read_preprocess import load_and_preprocess
+from qa_preprocess import load_and_preprocess
 from peturbation import run_peturbation, do_peturbed_reconstruct
 from captum.attr import (
     FeatureAblation,
@@ -100,7 +100,7 @@ def generate_text_with_logit(model, tokenizer, current_input, bl=True):
 
         inputs = tokenizer([inputs], return_tensors="pt",add_special_tokens=False).to("cuda")
 
-    outputs = model.generate(**inputs, temperature=0.01, output_logits=True, max_new_tokens=2,
+    outputs = model.generate(**inputs, temperature=0.01, output_logits=True, max_new_tokens=2048,
                              return_dict_in_generate=True, output_scores=True)
     response = tokenizer.decode(outputs['sequences'][0][len(inputs["input_ids"][0]):], skip_special_tokens=True)
     # print(outputs)
@@ -270,7 +270,7 @@ def gradient_attribution(model, tokenizer, prompt):
         tokenizer,
         skip_tokens=[1],  # skip the special token for the start of the text <s>
     )
-    attr_res = llm_attr.attribute(inp, target=target,n_steps=20)
+    attr_res = llm_attr.attribute(inp, target=target,n_steps=10)
     gpu_memory_usage = torch.cuda.max_memory_allocated(device=0)
     real_attr_res = attr_res.token_attr.cpu().detach().numpy()
     real_attr_res = np.absolute(real_attr_res)
@@ -342,7 +342,7 @@ def run_initial_inference(start, end,model,tokenizer,method):
     for ind, example in enumerate(df.select(range(len(df)-1))):
 
             token, word, component, real_output,exec_time,gpu_memory_usage = calculate_attributes(example['sentence'], example['component_range'],model,tokenizer,method)
-            #print("component----------->",component[2])
+
             if token is not None:
                 data.append(
                     {'prompt': example['sentence'], "real_output": real_output, "token_level": token, "word_level": word,
@@ -369,62 +369,30 @@ def only_calculate_results(prompt,model, tokenizer):
     return response
 
 
-def run_peturbed_inference(df, model, tokenizer):
-    column_names = None
-    if column_names is None:
-        # getting the columns demarkated by `reconstructed`
-        column_names = []
-        for col in df.columns:
-              if '_reconstructed_' in col:
-                if "0.2" in col:
-                    column_names.append(col)
 
-    print("running inference on petrubation columns:", column_names)
-
-    for id, col_name in enumerate(column_names):
-        df[col_name + "_result"] = df.apply(lambda row: only_calculate_results(row[col_name], model, tokenizer), axis=1)
-    # df.to_pickle("sentence" + str(id) +"_intermediate-run_peturbed_inference.pkl")
-    print("sentence has done!")
-    return df
 
 def main(method):
-    start = 45100
+    start = 1103
     end = start +200
 
     model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
    # method = "gradient"
     inference_df = run_initial_inference(start=start,end=end,model=model,tokenizer=tokenizer,method=method)
-    inference_df.to_pickle(f"{start}_{end}_{method}_new_inferenced_df.pkl")
+    inference_df.to_pickle(f"{start}_{end}_{method}_qa_new_inferenced_df.pkl")
     print("\ndone the inference")
 
-    with open(f"{start}_{end}_{method}_new_inferenced_df.pkl", "rb") as f:
+    with open(f"{start}_{end}_{method}_qa_new_inferenced_df.pkl", "rb") as f:
         postprocess_inferenced_df = pickle.load(f)
     postprocess_inferenced_df = postproces_inferenced(postprocess_inferenced_df)
-    postprocess_inferenced_df.to_pickle(f"{start}_{end}_{method}_new_postprocess_inferenced_df.pkl")
+    postprocess_inferenced_df.to_pickle(f"{start}_{end}_{method}_qa_new_postprocess_inferenced_df.pkl")
     print("\n done the postprocess")
 
 
-    with open(f"{start}_{end}_{method}_new_postprocess_inferenced_df.pkl", "rb") as f:
-        postprocess_inferenced_df = pickle.load(f)
 
-    perturbed_df = run_peturbation(postprocess_inferenced_df.copy())
-    perturbed_df.to_pickle(f"{start}_{end}_{method}_new_perturbed_df.pkl")
-    print("\n done the perturbed")
 
-    with open(f"{start}_{end}_{method}_new_perturbed_df.pkl", "rb") as f:
-        reconstructed_df = pickle.load(f)
-    reconstructed_df = do_peturbed_reconstruct(reconstructed_df.copy(), None)
-    reconstructed_df.to_pickle(f"{start}_{end}_{method}_new_reconstructed_df.pkl")
-    print("\n done the reconstructed")
-
-    with open(f"{start}_{end}_{method}_new_reconstructed_df.pkl", "rb") as f:
-        reconstructed_df = pickle.load(f)
-    perturbed_inferenced_df = run_peturbed_inference(reconstructed_df, model, tokenizer)
-    perturbed_inferenced_df.to_pickle(f"{start}_{end}_{method}_new_perturbed_inferenced_df.pkl")
-    print("\n done the reconstructed inference data")
 if __name__ == "__main__":
     main("gradient")
-    #main("perturbation")
-    #main("top_k_perturbation")
+    main("perturbation")
+    main("top_k_perturbation")
 
 

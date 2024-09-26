@@ -75,7 +75,7 @@ def inference_openai(sentences):
             for data in top_twenty_logprobs.content
         }
         output_cost += len(encoding.encode(response))
-        # print(f"\n token_dict {token_dict}")
+        print(f"\n token_dict {token_dict}")
         list_top20_logprobs.append(token_dict)
 
     return list_top20_logprobs, response, output_cost
@@ -379,9 +379,9 @@ def main(method):
 
 
 if __name__ == "__main__":
-   main("similarity")
-   #  main("discretize")
-   #  main("logits")
+   #main("similarity")
+   #main("discretize")
+   main("logits")
 
 
 
