@@ -286,7 +286,7 @@ def gradient_attribution(model, tokenizer, prompt):
     gpu_memory_usage = gpu_memory_usage/1024/1024/1204
     print(f"GPU Memory Usage: {gpu_memory_usage} GB")
     end_time = time.time()
-    #print(f"{final_attributes_dict}")
+    print(f"{final_attributes_dict}")
     return {
         "tokens": final_attributes_dict
     }, target, end_time - start_time, gpu_memory_usage
