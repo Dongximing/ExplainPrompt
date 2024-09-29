@@ -15,7 +15,7 @@ def preprocess_data(examples):
     queries = []
     instructions = []
     for query in examples['question']:
-        #query = f"<s>[INST] {query} [/INST]"
+        query = f"<s>[INST] {query} [/INST]"
         combined = query + ' ' + suffix
         updated_sentences.append(combined)
         range_info = get_query_instruction_positions(query)
@@ -48,7 +48,7 @@ def preprocess_data_baseline(examples):
 def get_query_instruction_positions(query):
     # Concatenate the sentences
     instruction = "Explain the answer like I am five"
-    #query = f"<s>[INST] {query} [/INST]"
+    query = f"<s>[INST] {query} [/INST]"
     combined_text = query + ' ' + instruction
 
     # Tokenize the combined text
