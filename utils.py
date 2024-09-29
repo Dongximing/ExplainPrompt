@@ -157,10 +157,33 @@ def postproces_inferenced(df):
         tokens_list = component_dict[2][key]
         return tokens_list
 
+    def process_row(row):
+        # 解析数据
+        items = row['instructions_tokens']
+
+        # 计算总和用于归一化
+        total_value = sum(item['value'] for item in items)
+
+        # 归一化并找到最大值及其token
+        max_value = -1
+        max_token = None
+        for item in items:
+            normalized_value = item['value'] / total_value
+            item['normalized_value'] = normalized_value  # 可以保存归一化值以便检查
+            if normalized_value > max_value:
+                max_value = normalized_value
+                max_token = item['token']
+
+        return pd.Series([max_value, max_token], index=['max_normalized_value', 'max_token'])
+
+    # 应用函数并扩展DataFrame
+
+
     # Applying the function to each row for both 'instructions' and 'query'
     df['instructions_tokens'] = df['component_level'].apply(join_token_texts, key='instruction')
     df['query_tokens'] = df['component_level'].apply(join_token_texts, key='query')
-
+    new_columns = df.apply(process_row, axis=1)
+    df = pd.concat([df, new_columns], axis=1)
     return df
 
 def do_peturbed_reconstruct(df, modification_types=None):

@@ -97,7 +97,7 @@ def inference_openai(sentences):
             time.sleep(10)  # wait for 10 seconds before checking again
 
     file_response = client.files.content(status.output_file_id)
-    response_file = "response_file.jsonl"
+    response_file = "response_file01.jsonl"
     with open(response_file, 'w') as file:
             file.write(file_response.text)
     import json
@@ -105,7 +105,7 @@ def inference_openai(sentences):
     list_top20_logprobs = []
     encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
     all_data = []
-    with open('response_file.jsonl', 'r') as file:
+    with open('response_file01.jsonl', 'r') as file:
         for line in file:
             data = json.loads(line)
             all_data.append(data)
@@ -183,12 +183,12 @@ def infer_openai_without_logits(sentences):
             time.sleep(10)  # wait for 10 seconds before checking again
 
     file_response = client.files.content(status.output_file_id)
-    response_file = "response_file.jsonl"
+    response_file = "response_file01.jsonl"
     with open(response_file, 'w') as file:
         file.write(file_response.text)
 
     all_data = []
-    with open('response_file.jsonl', 'r') as file:
+    with open('response_file01.jsonl', 'r') as file:
         for line in file:
             data = json.loads(line)
             all_data.append(data)
@@ -469,8 +469,9 @@ def run_peturbed_inference(df, results_path, column_names=None):
     return df
 
 
-def main(method,start,end):
-
+def main(method):
+    start = 1403
+    end = start +100
     inference_df = run_initial_inference(start=start, end=end, method=method)
     inference_df.to_pickle(f"{start}_{end}_{method}_flesh_new_prompt_qa_inferenced_df.pkl")
     print("\ndone the inference")
@@ -487,13 +488,9 @@ def main(method,start,end):
 
 
 if __name__ == "__main__":
-    start = 1303
-    end = start + 100
-    main("similarity",1303, 1403)
-    main("similarity", 1003, 1103)
-    main("similarity", 1403, 1503)
-    # main("discretize")
-    # main("logits")
+    #main("similarity")
+    main("discretize")
+    main("logits")
 
 
 

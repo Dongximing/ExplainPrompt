@@ -373,7 +373,7 @@ def only_calculate_results(prompt,model, tokenizer):
 
 def main(method):
     start = 1103
-    end = start +200
+    end = start +100
 
     model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
    # method = "gradient"
@@ -391,8 +391,8 @@ def main(method):
 
 
 if __name__ == "__main__":
-    main("gradient")
-    #main("perturbation")
-    #main("top_k_perturbation")
+    #main("gradient")
+    main("perturbation")
+    main("top_k_perturbation")
 
 
