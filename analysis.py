@@ -23,6 +23,6 @@ def load_and_combine_pkl_files(directory_path):
 
 
 # Usage
-directory_path = 'path_to_your_directory'
+directory_path = '/Users/ximing/Desktop/Explainprompt/similarity/'
 big_df = load_and_combine_pkl_files(directory_path)
 print(big_df)

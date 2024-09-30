@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import textstat
 
-input_file = "1103_1203_discretize_flesh_new_prompt_qa_postprocess_inferenced_df.pkl"
+input_file = "1203_1303_similarity_flesh_new_prompt_qa_postprocess_inferenced_df.pkl"
 encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
 
 def process_row(row):
