@@ -2,7 +2,8 @@ import bitsandbytes as bnb
 import torch
 from sentence_transformers import SentenceTransformer, util
 import numpy as np
-
+import matplotlib.cm as cm
+import matplotlib.pyplot as plt
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 import random
 import sys
@@ -297,8 +298,6 @@ def discretize_method(model, tokenizer, prompt):
     scores = []
     baseline_input_tokens = tokenizer.tokenize(baseline_input)
     tokenized_texts_tokens = [tokenizer.tokenize(text) for text in response]
-    print(baseline_input_tokens)
-    print(tokenized_texts_tokens)
     for tokens in tokenized_texts_tokens:
         score = do_comparison(baseline_input_tokens,tokens)
         scores.append(1 - score)
@@ -415,7 +414,7 @@ def gradient_attribution(model, tokenizer, prompt):
 
 
 
-def calculate_attributes(prompt,component_sentences,model,tokenizer,method):
+def calculate_attributes(prompt,model,tokenizer,method):
     """
     Calculate the attributions for the given model and calculate_method.
 
@@ -427,48 +426,39 @@ def calculate_attributes(prompt,component_sentences,model,tokenizer,method):
     - attribution: The attributions calculated using the given calculate_method.
     """
     calculate_method = method
-    model_weight = False
+
     if calculate_method == "perturbation":
         attribution,target,time,gpu_memory_usage = perturbation_attribution(model, tokenizer, prompt=prompt)
         words_importance = calculate_word_scores(prompt, attribution)
-        component_importance = calculate_component_scores(words_importance.get('tokens'), component_sentences)
-        return attribution, words_importance, component_importance, target,time,gpu_memory_usage
+        return attribution, words_importance, target,time,gpu_memory_usage
 
     elif calculate_method == "gradient":
         attribution,target,time,gpu_memory_usage = gradient_attribution(model, tokenizer, prompt=prompt)
         words_importance = calculate_word_scores(prompt, attribution)
-        component_importance = calculate_component_scores(words_importance.get('tokens'), component_sentences)
-        return attribution, words_importance, component_importance, target,time,gpu_memory_usage
+        return attribution, words_importance,  target,time,gpu_memory_usage
     elif calculate_method == "top_k_perturbation":
         attribution,target,time,gpu_memory_usage = perturbation_attribution_top_k(model, tokenizer, prompt=prompt)
         words_importance = calculate_word_scores(prompt, attribution)
-        component_importance = calculate_component_scores(words_importance.get('tokens'), component_sentences)
-        return attribution, words_importance, component_importance, target,time,gpu_memory_usage
+        return attribution, words_importance,  target,time,gpu_memory_usage
     elif calculate_method == "similarity":
         attribution,target,time,gpu_memory_usage = similarity_method(model, tokenizer, prompt=prompt)
         words_importance = calculate_word_scores(prompt, attribution)
-        component_importance = calculate_component_scores(words_importance.get('tokens'), component_sentences)
-        return attribution, words_importance, component_importance, target,time,gpu_memory_usage
+        return attribution, words_importance,  target,time,gpu_memory_usage
     else:
         attribution,target,time,gpu_memory_usage = discretize_method(model, tokenizer, prompt=prompt)
         words_importance = calculate_word_scores(prompt, attribution)
-        component_importance = calculate_component_scores(words_importance.get('tokens'), component_sentences)
-        return attribution, words_importance, component_importance, target,time,gpu_memory_usage
+        return attribution, words_importance, target,time,gpu_memory_usage
 
 
 
-    # if model_weight:
-    #     pass
-    # else:
-    #     pass
-def run_initial_inference(start, end,model,tokenizer,method):
-    df = load_and_preprocess([start,end])
-    print(len(df))
+def run_initial_inference(prompt,method):
+    model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
+
     data = []
 
-    for ind, example in enumerate(df.select(range(len(df)-1))):
+    for ind, example in enumerate([1]):
 
-            token, word, component, real_output,exec_time,gpu_memory_usage = calculate_attributes(example['prefix_query'], example['component_range'],model,tokenizer,method)
+            token, word, component, real_output,exec_time,gpu_memory_usage = calculate_attributes(prompt,model,tokenizer,method)
 
             if token is not None:
                 data.append(
@@ -483,11 +473,45 @@ def run_initial_inference(start, end,model,tokenizer,method):
                      "gpu_memory_usage":gpu_memory_usage
                      }
                 )
+                if isinstance(word, str):
+                    tokens_data = json.loads(word)
+                else:
+                    tokens_data = word
+
+                word_count = {}
+                unique_tokens = []
+
+                for token in tokens_data['tokens']:
+                    token_name = token['token']
+                    if token_name in word_count:
+                        word_count[token_name] += 1
+                    else:
+                        word_count[token_name] = 1
+
+                    unique_token = f"{token_name}_{word_count[token_name]}"
+                    unique_tokens.append(unique_token)
+                values = [token['value'] for token in tokens_data['tokens']]
+
+                norm = plt.Normalize(min(values), max(values))  # 归一化值范围
+                colors = cm.viridis(norm(values))  # 生成颜色映射
+
+                fig, ax = plt.subplots(figsize=(10, 10))
+                bars = ax.bar(unique_tokens, values, color=colors)
+
+                # 设置轴标签和标题
+                ax.set_xlabel('Tokens')
+                ax.set_ylabel('Values')
+                ax.set_title('Token Values Visualization')
+                plt.xticks(rotation=90)  # 标签可能需要旋转以提高可读性
+
+                # 添加颜色条
+                plt.colorbar(cm.ScalarMappable(norm=norm, cmap='viridis'), ax=ax)
+
+                # 显示图表
+                plt.show()
             else:
                 print(f"hg_infer.py:170  No output for prompt: {example['sentence']}")
-    result = pd.DataFrame(data)
 
-    return result
 
 
 def only_calculate_results(prompt,model, tokenizer):
@@ -498,20 +522,14 @@ def only_calculate_results(prompt,model, tokenizer):
 
 
 def main(method):
-    start = 5103
-    end = start +3
 
-    model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
+
+
    # method = "gradient"
-    inference_df = run_initial_inference(start=start,end=end,model=model,tokenizer=tokenizer,method=method)
-    inference_df.to_pickle(f"{start}_{end}_{method}_qa_new_inferenced_df.pkl")
+    inference_df = run_initial_inference(prompt="what is the GOAT basketball player?",method=method)
+
     print("\ndone the inference")
 
-    with open(f"{start}_{end}_{method}_qa_new_inferenced_df.pkl", "rb") as f:
-        postprocess_inferenced_df = pickle.load(f)
-    postprocess_inferenced_df = postproces_inferenced(postprocess_inferenced_df)
-    postprocess_inferenced_df.to_pickle(f"{start}_{end}_{method}_qa_new_postprocess_inferenced_df.pkl")
-    print("\n done the postprocess")
 
 
 
@@ -520,7 +538,7 @@ if __name__ == "__main__":
     # main("gradient")
     # main("perturbation")
     #main("top_k_perturbation")
-    #main("similarity")
+    main("similarity")
     main("kkk")
 
 
