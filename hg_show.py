@@ -458,7 +458,7 @@ def run_initial_inference(prompt,method):
 
     for ind, example in enumerate([1]):
 
-            token, word, component, real_output,exec_time,gpu_memory_usage = calculate_attributes(prompt,model,tokenizer,method)
+            token, word,  real_output,exec_time,gpu_memory_usage = calculate_attributes(prompt,model,tokenizer,method)
 
             if token is not None:
 
