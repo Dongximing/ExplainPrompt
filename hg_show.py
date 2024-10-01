@@ -51,7 +51,7 @@ def load_model(model_name, bnb_config):
 
     return model, tokenizer
 
-def generate_text(model, tokenizer,input):
+def generate_text(model, tokenizer,input,max_new_tokens):
     """
     Generate text using the given model and tokenizer.
 
@@ -66,7 +66,7 @@ def generate_text(model, tokenizer,input):
     model_input = tokenizer(input, return_tensors="pt", padding=True, truncation=True).to("cuda")
     model.eval()
     with torch.no_grad():
-        output_ids = model.generate(model_input["input_ids"], max_new_tokens=50,temperature=0.01)[0]
+        output_ids = model.generate(model_input["input_ids"], max_new_tokens=max_new_tokens,temperature=0.01)[0]
         generated_tokens = output_ids[len(model_input["input_ids"][0]):]
         response = tokenizer.decode(generated_tokens, skip_special_tokens=True)
     print(f"Generated text: {response}")
@@ -87,7 +87,7 @@ def generate_candidate(original_prompt, tokenizer):
     candidate_input = generated_tensor_candidate(baseline_input["input_ids"])
     return candidate_input
 
-def generate_text_with_logit(model, tokenizer, current_input, bl=True):
+def generate_text_with_logit(model, tokenizer, current_input, bl=True,max_new_tokens):
     """
     Generate text using the given model and tokenizer.
 
@@ -106,7 +106,7 @@ def generate_text_with_logit(model, tokenizer, current_input, bl=True):
 
         inputs = tokenizer([inputs], return_tensors="pt",add_special_tokens=False).to("cuda")
 
-    outputs = model.generate(**inputs, temperature=0.01, output_logits=True, max_new_tokens=50,
+    outputs = model.generate(**inputs, temperature=0.01, output_logits=True, max_new_tokens=max_new_tokens,
                              return_dict_in_generate=True, output_scores=True)
     response = tokenizer.decode(outputs['sequences'][0][len(inputs["input_ids"][0]):], skip_special_tokens=True)
     print(outputs)
@@ -131,7 +131,7 @@ def generate_text_with_logit(model, tokenizer, current_input, bl=True):
         baselines.append(baseline)
     return baselines
 
-def generate_text_with_ig(model, tokenizer, current_input, bl=False):
+def generate_text_with_ig(model, tokenizer, current_input, bl=False,max_new_tokens):
     """
     Generate text using the given model and tokenizer.
 
@@ -150,7 +150,7 @@ def generate_text_with_ig(model, tokenizer, current_input, bl=False):
 
         inputs = tokenizer([inputs], return_tensors="pt",add_special_tokens=False).to("cuda")
 
-    outputs = model.generate(**inputs, temperature=0.01, output_logits=True, max_new_tokens=50,
+    outputs = model.generate(**inputs, temperature=0.01, output_logits=True, max_new_tokens=max_new_tokens,
                              return_dict_in_generate=True, output_scores=True)
     response = tokenizer.decode(outputs['sequences'][0][len(inputs["input_ids"][0]):], skip_special_tokens=True)
     #print(outputs)
@@ -256,11 +256,11 @@ def generate_candidate(original_prompt, tokenizer):
     baseline_input = tokenizer(original_prompt, return_tensors="pt", add_special_tokens=False).to("cuda")
     candidate_input = generated_tensor_candidate(baseline_input["input_ids"])
     return candidate_input
-def similarity_method(model, tokenizer, prompt):
+def similarity_method(model, tokenizer, prompt,max_new_tokens):
     model_input = tokenizer(prompt, return_tensors="pt", add_special_tokens=False).to("cuda")
     model.eval()
     with torch.no_grad():
-        output_ids = model.generate(model_input["input_ids"], max_new_tokens=50, temperature=0.1)[0]
+        output_ids = model.generate(model_input["input_ids"], max_new_tokens=max_new_tokens, temperature=0.1)[0]
         baseline_input = tokenizer.decode(output_ids[len(model_input['input_ids'][0][:]):], skip_special_tokens=True)
         print(baseline_input)
     candidate_input = generate_candidate(prompt, tokenizer)
@@ -270,7 +270,7 @@ def similarity_method(model, tokenizer, prompt):
     start_time = time.time()
     model.eval()
     with torch.no_grad():
-        output_ids = model.generate(candidate_input, max_new_tokens=50, temperature=0.1)
+        output_ids = model.generate(candidate_input, max_new_tokens=max_new_tokens, temperature=0.1)
         response = tokenizer.batch_decode(output_ids[:, real_length:], skip_special_tokens=True)
 
 
@@ -313,7 +313,7 @@ def similarity_method(model, tokenizer, prompt):
 
 
 
-def discretize_method(model, tokenizer, prompt):
+def discretize_method(model, tokenizer, prompt,max_new_tokens):
     model_input = tokenizer(prompt, return_tensors="pt", add_special_tokens=False).to("cuda")
     real_length = len(model_input['input_ids'][0][:])
     candidate_input = generate_candidate(prompt, tokenizer)
@@ -322,10 +322,10 @@ def discretize_method(model, tokenizer, prompt):
     start_time = time.time()
 
     with torch.no_grad():
-        output_ids = model.generate(candidate_input, max_new_tokens=50, temperature=0.1)
+        output_ids = model.generate(candidate_input, max_new_tokens=max_new_tokens, temperature=0.1)
         #     print(output_ids)
         response = tokenizer.batch_decode(output_ids[:, real_length:], skip_special_tokens=True)
-        output_ids = model.generate(model_input["input_ids"], max_new_tokens=50, temperature=0.1)[0]
+        output_ids = model.generate(model_input["input_ids"], max_new_tokens=max_new_tokens, temperature=0.1)[0]
         baseline_input = tokenizer.decode(output_ids[len(model_input['input_ids'][0][:]):], skip_special_tokens=True)
 
 
@@ -355,7 +355,7 @@ def discretize_method(model, tokenizer, prompt):
     }, baseline_input, end_time - start_time, gpu_memory_usage
 
 
-def perturbation_attribution(model, tokenizer, prompt):
+def perturbation_attribution(model, tokenizer, prompt,max_new_tokens):
     """
     Calculate attribution using perturbation method.
 
@@ -497,7 +497,7 @@ def gradient_attribution(model, tokenizer, prompt):
 
 
 
-def calculate_attributes(prompt,model,tokenizer,method):
+def calculate_attributes(prompt,model,tokenizer,method,max_new_tokens):
     """
     Calculate the attributions for the given model and calculate_method.
 
@@ -511,41 +511,41 @@ def calculate_attributes(prompt,model,tokenizer,method):
     calculate_method = method
 
     if calculate_method == "perturbation":
-        attribution,target,time,gpu_memory_usage = perturbation_attribution(model, tokenizer, prompt=prompt)
+        attribution,target,time,gpu_memory_usage = perturbation_attribution(model, tokenizer, prompt=prompt,max_new_tokens)
         words_importance = calculate_word_scores(prompt, attribution)
         return attribution, words_importance, target,time,gpu_memory_usage
     elif calculate_method == "new_gradient":
-        attribution,target,time,gpu_memory_usage = new_gradient_attribution(model, tokenizer, prompt=prompt)
+        attribution,target,time,gpu_memory_usage = new_gradient_attribution(model, tokenizer, prompt=prompt,max_new_tokens)
         words_importance = calculate_word_scores(prompt, attribution)
         return attribution, words_importance,  target,time,gpu_memory_usage
 
     elif calculate_method == "gradient":
-        attribution,target,time,gpu_memory_usage = gradient_attribution(model, tokenizer, prompt=prompt)
+        attribution,target,time,gpu_memory_usage = gradient_attribution(model, tokenizer, prompt=prompt,max_new_tokens=max_new_tokens)
         words_importance = calculate_word_scores(prompt, attribution)
         return attribution, words_importance,  target,time,gpu_memory_usage
     elif calculate_method == "top_k_perturbation":
-        attribution,target,time,gpu_memory_usage = perturbation_attribution_top_k(model, tokenizer, prompt=prompt)
+        attribution,target,time,gpu_memory_usage = perturbation_attribution_top_k(model, tokenizer, prompt=prompt,max_new_tokens=max_new_tokens)
         words_importance = calculate_word_scores(prompt, attribution)
         return attribution, words_importance,  target,time,gpu_memory_usage
     elif calculate_method == "similarity":
-        attribution,target,time,gpu_memory_usage = similarity_method(model, tokenizer, prompt=prompt)
+        attribution,target,time,gpu_memory_usage = similarity_method(model, tokenizer, prompt=prompt,max_new_tokens=max_new_tokens)
         words_importance = calculate_word_scores(prompt, attribution)
         return attribution, words_importance,  target,time,gpu_memory_usage
     else:
-        attribution,target,time,gpu_memory_usage = discretize_method(model, tokenizer, prompt=prompt)
+        attribution,target,time,gpu_memory_usage = discretize_method(model, tokenizer, prompt=prompt,max_new_tokens=max_new_tokens)
         words_importance = calculate_word_scores(prompt, attribution)
         return attribution, words_importance, target,time,gpu_memory_usage
 
 
 
-def run_initial_inference(prompt,method):
+def run_initial_inference(prompt,method,max_new_tokens):
     model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
 
     data = []
 
     for ind, example in enumerate([1]):
 
-            token, word,  real_output,exec_time,gpu_memory_usage = calculate_attributes(prompt,model,tokenizer,method)
+            token, word,  real_output,exec_time,gpu_memory_usage = calculate_attributes(prompt,model,tokenizer,method,max_new_tokens)
 
             if token is not None:
 
