@@ -390,17 +390,10 @@ def new_gradient_attribution(model, tokenizer, prompt):
         tokenizer,
         skip_tokens=[1],  # skip the special token for the start of the text <s>
     )
-    pipe = pipeline('feature-extraction',model=model,tokenizer=tokenizer)
-    target = pipe(target)
-    tensor_list = [torch.tensor(item) for item in target[0]]
-    stacked_tensor = torch.vstack(tensor_list)
 
-    # Sum the tensors along the vertical axis (dimension 0)
-    vertical_sum = torch.sum(stacked_tensor, dim=0)
-    vertical_sum = torch.unsqueeze(vertical_sum, 0)
-    vertical_sum = torch.unsqueeze(vertical_sum, 0)
-    print(vertical_sum.size())
-    attr_res = llm_attr.attribute(inp, target=vertical_sum,n_steps=10)
+
+
+    attr_res = llm_attr.attribute(inp,n_steps=50)
     gpu_memory_usage = torch.cuda.max_memory_allocated(device=0)
     real_attr_res = attr_res.token_attr.cpu().detach().numpy()
     real_attr_res = np.absolute(real_attr_res)
