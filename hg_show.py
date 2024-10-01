@@ -156,10 +156,8 @@ def generate_text_with_ig(model, tokenizer, current_input, bl=False):
     #print(outputs)
     all_top_logits = []
     # print(outputs.scores)
-    if bl:
-        k = 20
-    else:
-        k = 1
+    print(outputs['sequences'][0][len(inputs["input_ids"][0]):])
+
     for i,id in enumerate(outputs['sequences'][0][len(inputs["input_ids"][0]):]):
         log_probabilities = (outputs.logits)[i]
         top_logits= log_probabilities[id]
