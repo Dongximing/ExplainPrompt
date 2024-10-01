@@ -224,21 +224,24 @@ def generate_candidate(original_prompt, tokenizer):
     return candidate_input
 def similarity_method(model, tokenizer, prompt):
     model_input = tokenizer(prompt, return_tensors="pt", add_special_tokens=False).to("cuda")
-    real_length = len(model_input['input_ids'][0][:])
-    candidate_input = generate_candidate(prompt, tokenizer)
-    tokens = tokenizer.convert_ids_to_tokens(model_input['input_ids'].squeeze(0))
-    import time
-    start_time = time.time()
-
+    model.eval()
     with torch.no_grad():
-        output_ids = model.generate(candidate_input, max_new_tokens=50, temperature=0.1)
-        #     print(output_ids)
-        response = tokenizer.batch_decode(output_ids[:, real_length:], skip_special_tokens=True)
         output_ids = model.generate(model_input["input_ids"], max_new_tokens=50, temperature=0.1)[0]
         baseline_input = tokenizer.decode(output_ids[len(model_input['input_ids'][0][:]):], skip_special_tokens=True)
+        print(baseline_input)
+    candidate_input = generate_candidate(prompt, tokenizer)
+    tokens = tokenizer.convert_ids_to_tokens(model_input['input_ids'].squeeze(0))
+    real_length = len(model_input['input_ids'][0][:])
+    import time
+    start_time = time.time()
+    model.eval()
+    with torch.no_grad():
+        output_ids = model.generate(candidate_input, max_new_tokens=50, temperature=0.1)
+        response = tokenizer.batch_decode(output_ids[:, real_length:], skip_special_tokens=True)
+
 
     # Load the model
-    sentence_model = SentenceTransformer('all-MiniLM-L6-v2').to("cuda")
+    sentence_model = SentenceTransformer('all-MiniLM-L6-v2')
     gpu_memory_usage = torch.cuda.max_memory_allocated(device=0)
     gpu_memory_usage = gpu_memory_usage/1024/1024/1204
     print(f"GPU Memory Usage: {gpu_memory_usage} GB")
