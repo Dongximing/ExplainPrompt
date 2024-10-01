@@ -304,9 +304,11 @@ def discretize_method(model, tokenizer, prompt):
         scores.append(1 - score)
     scores = np.array(scores)
     norm_scores = scores / np.sum(scores)
+    print(len(norm_scores))
+    print(len(tokens))
     end_time  = time.time()
     final_attributes_dict = [{
-        'token': hg_strip_tokenizer_prefix(tokens[i]),
+        'token': hg_strip_tokenizer_prefix(item),
         'type': 'input',
         'value': norm_scores[i],
         'position': i
