@@ -433,7 +433,7 @@ def new_gradient_attribution(model, tokenizer, prompt):
         skip_tokens=[1],  # skip the special token for the start of the text <s>
     )
 
-    step_list =
+    step_list = []
     attr_res = llm_attr.attribute(inp=inp,target= target,step_list=[0,1,2], n_steps=30)
     gpu_memory_usage = torch.cuda.max_memory_allocated(device=0)
     real_attr_res = attr_res.token_attr.cpu().detach().numpy()
