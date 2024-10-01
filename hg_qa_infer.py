@@ -307,6 +307,8 @@ def discretize_method(model, tokenizer, prompt):
         'position': i
     } for i, item in enumerate(tokens)]
     print(f"\n baseline {final_attributes_dict}")
+    print("prompt",prompt)
+    print(norm_scores)
     return {
         "tokens": final_attributes_dict
     }, baseline_input, end_time - start_time, gpu_memory_usage
