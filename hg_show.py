@@ -160,20 +160,13 @@ def generate_text_with_ig(model, tokenizer, current_input, bl=False):
         k = 20
     else:
         k = 1
-    for i in range(len(outputs.scores)):
+    for i,id in enumerate(outputs['sequences'][0][len(inputs["input_ids"][0]):]):
         log_probabilities = (outputs.logits)[i]
-        top_logits, top_indices = torch.topk(log_probabilities, k)
-        all_top_logits.append((top_indices[0], top_logits[0]))
+        top_logits= log_probabilities[id]
+        all_top_logits.append((top_logits))
+    top_indices = sorted(range(len(all_top_logits)), key=lambda x: all_top_logits[x], reverse=True)[:5]
 
-    baselines = []
-    for step, (indices, logits) in enumerate(all_top_logits):
-
-        baseline = []
-        for idx, logit in zip(indices, logits):
-            token = tokenizer.decode([idx.item()])
-            baseline.append(token)
-        baselines.append(baseline)
-    return baselines
+    return response,top_indices
 
 def perturbation_attribution_top_k(model, tokenizer, prompt):
     """
@@ -423,7 +416,7 @@ def new_gradient_attribution(model, tokenizer, prompt):
     """
     import time
     start_time = time.time()
-    target = generate_text_with_ig(model, tokenizer, prompt)
+    response, top_indices = generate_text_with_ig(model, tokenizer, prompt)
     emb_layer = model.get_submodule("model.embed_tokens")
     ig = LayerIntegratedGradients(model, emb_layer)
     llm_attr = LLMGradientAttribution(ig, tokenizer)
@@ -433,8 +426,9 @@ def new_gradient_attribution(model, tokenizer, prompt):
         skip_tokens=[1],  # skip the special token for the start of the text <s>
     )
 
-    step_list = []
-    attr_res = llm_attr.attribute(inp=inp,target= target,step_list=[0,1,2], n_steps=30)
+    step_list = top_indices
+    print(step_list)
+    attr_res = llm_attr.attribute(inp=inp,target= target,step_list=step_list, n_steps=30)
     gpu_memory_usage = torch.cuda.max_memory_allocated(device=0)
     real_attr_res = attr_res.token_attr.cpu().detach().numpy()
     real_attr_res = np.absolute(real_attr_res)
