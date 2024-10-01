@@ -299,8 +299,8 @@ def discretize_method(model, tokenizer, prompt):
     tokenized_texts_tokens = [tokenizer.tokenize(text) for text in response]
     print(baseline_input_tokens)
     print(tokenized_texts_tokens)
-    for tokens in tokenized_texts_tokens:
-        score = do_comparison(baseline_input_tokens,tokens)
+    for token in tokenized_texts_tokens:
+        score = do_comparison(baseline_input_tokens,token)
         scores.append(1 - score)
     scores = np.array(scores)
     norm_scores = scores / np.sum(scores)
