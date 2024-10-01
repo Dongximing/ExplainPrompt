@@ -390,7 +390,8 @@ def new_gradient_attribution(model, tokenizer, prompt):
         tokenizer,
         skip_tokens=[1],  # skip the special token for the start of the text <s>
     )
-    target = pipeline('feature-extraction',model=model,tokenizer=tokenizer)
+    pipe = pipeline('feature-extraction',model=model,tokenizer=tokenizer)
+    target = pipe("this is a test")
     tensor_list = [torch.tensor(item) for item in target[0]]
     stacked_tensor = torch.vstack(tensor_list)
 
