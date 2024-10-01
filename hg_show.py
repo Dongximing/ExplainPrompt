@@ -153,7 +153,7 @@ def generate_text_with_ig(model, tokenizer, current_input, bl=False):
     outputs = model.generate(**inputs, temperature=0.01, output_logits=True, max_new_tokens=50,
                              return_dict_in_generate=True, output_scores=True)
     response = tokenizer.decode(outputs['sequences'][0][len(inputs["input_ids"][0]):], skip_special_tokens=True)
-    # print(outputs)
+    print(outputs)
     all_top_logits = []
     # print(outputs.scores)
     if bl:
