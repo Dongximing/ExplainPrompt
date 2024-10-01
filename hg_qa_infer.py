@@ -1,5 +1,8 @@
 import bitsandbytes as bnb
 import torch
+from sentence_transformers import SentenceTransformer, util
+import numpy as np
+
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 import random
 import sys
@@ -198,6 +201,116 @@ def perturbation_attribution_top_k(model, tokenizer, prompt):
         "tokens": final_attributes_dict
     },target,end_time - start_time, gpu_memory_usage
 
+def do_comparison(cleaned_baseline, candidate_token):
+    comparison_set = set(cleaned_baseline)
+    candidate_set = set(candidate_token)
+    marks = [1 if token in candidate_set else 0 for token in comparison_set]
+    average = sum(marks) / len(comparison_set)
+    return average
+#     return mask
+def generated_tensor_candidate(baseline):
+    number_line = baseline.shape[1]
+    output_tensor = baseline.repeat(number_line, 1)
+    mask = torch.eye(number_line, dtype=bool)
+    output_tensor[mask] = 2
+
+    return output_tensor
+
+
+def generate_candidate(original_prompt, tokenizer):
+    baseline_input = tokenizer(original_prompt, return_tensors="pt", add_special_tokens=False).to("cuda")
+    candidate_input = generated_tensor_candidate(baseline_input["input_ids"])
+    return candidate_input
+def similarity_method(model, tokenizer, prompt):
+    model_input = tokenizer(prompt, return_tensors="pt", add_special_tokens=False).to("cuda")
+    real_length = len(model_input['input_ids'][0][:])
+    candidate_input = generate_candidate(prompt, tokenizer)
+    tokens = tokenizer.convert_ids_to_tokens(model_input['input_ids'].squeeze(0))
+    import time
+    start_time = time.time()
+
+    with torch.no_grad():
+        output_ids = model.generate(candidate_input, max_new_tokens=20, temperature=0.1)
+        #     print(output_ids)
+        response = tokenizer.batch_decode(output_ids[:, real_length:], skip_special_tokens=True)
+        output_ids = model.generate(model_input["input_ids"], max_new_tokens=20, temperature=0.1)[0]
+        baseline_input = tokenizer.decode(output_ids[len(model_input['input_ids'][0][:]):], skip_special_tokens=True)
+
+    # Load the model
+    sentence_model = SentenceTransformer('all-MiniLM-L6-v2').to("cuda")
+    gpu_memory_usage = torch.cuda.max_memory_allocated(device=0)
+    gpu_memory_usage = gpu_memory_usage/1024/1024/1204
+    print(f"GPU Memory Usage: {gpu_memory_usage} GB")
+
+    # Define the query and the list of sentences
+    query = baseline_input
+    sentences = response
+
+    # Encode the query and sentences to get their embeddings
+    query_embedding = sentence_model.encode(query, convert_to_tensor=True)
+    sentence_embeddings = sentence_model.encode(sentences, convert_to_tensor=True)
+
+    # Compute cosine similarities
+    cosine_scores = util.pytorch_cos_sim(query_embedding, sentence_embeddings)
+
+    # Find the most similar sentences
+    similarities = cosine_scores[0].cpu().numpy()
+
+    similarities = 1 - similarities
+
+    similarities = similarities / sum(similarities)
+    final_attributes_dict = [{
+        'token': hg_strip_tokenizer_prefix(tokens[i]),
+        'type': 'input',
+        'value': similarities[i],
+        'position': i
+    } for i, item in enumerate(tokens)]
+    end_time = time.time()
+    return {
+        "tokens": final_attributes_dict
+    }, baseline_input, end_time - start_time, gpu_memory_usage
+
+
+
+def discretize_method(model, tokenizer, prompt):
+    model_input = tokenizer(prompt, return_tensors="pt", add_special_tokens=False).to("cuda")
+    real_length = len(model_input['input_ids'][0][:])
+    candidate_input = generate_candidate(prompt, tokenizer)
+    tokens = tokenizer.convert_ids_to_tokens(model_input['input_ids'].squeeze(0))
+    import time
+    start_time = time.time()
+
+    with torch.no_grad():
+        output_ids = model.generate(candidate_input, max_new_tokens=20, temperature=0.1)
+        #     print(output_ids)
+        response = tokenizer.batch_decode(output_ids[:, real_length:], skip_special_tokens=True)
+        output_ids = model.generate(model_input["input_ids"], max_new_tokens=20, temperature=0.1)[0]
+        baseline_input = tokenizer.decode(output_ids[len(model_input['input_ids'][0][:]):], skip_special_tokens=True)
+
+
+    gpu_memory_usage = torch.cuda.max_memory_allocated(device=0)
+    gpu_memory_usage = gpu_memory_usage/1024/1024/1204
+    print(f"GPU Memory Usage: {gpu_memory_usage} GB")
+    scores = []
+    baseline_input_tokens = tokenizer.tokenize(baseline_input)
+    tokenized_texts_tokens = [tokenizer.tokenize(text) for text in response]
+    for tokens in tokenized_texts_tokens:
+        score = do_comparison(baseline_input_tokens,tokens)
+        scores.append(1 - score)
+    scores = np.array(scores)
+    norm_scores = scores / np.sum(scores)
+    end_time  = time.time()
+    final_attributes_dict = [{
+        'token': hg_strip_tokenizer_prefix(tokens[i]),
+        'type': 'input',
+        'value': norm_scores[i],
+        'position': i
+    } for i, item in enumerate(tokens)]
+    print(f"\n baseline {final_attributes_dict}")
+    return {
+        "tokens": final_attributes_dict
+    }, baseline_input, end_time - start_time, gpu_memory_usage
+
 
 def perturbation_attribution(model, tokenizer, prompt):
     """
@@ -324,11 +437,17 @@ def calculate_attributes(prompt,component_sentences,model,tokenizer,method):
         words_importance = calculate_word_scores(prompt, attribution)
         component_importance = calculate_component_scores(words_importance.get('tokens'), component_sentences)
         return attribution, words_importance, component_importance, target,time,gpu_memory_usage
-    else:
-        attribution,target,time,gpu_memory_usage = perturbation_attribution_top_k(model, tokenizer, prompt=prompt)
+    elif calculate_method == "similarity":
+        attribution,target,time,gpu_memory_usage = similarity_method(model, tokenizer, prompt=prompt)
         words_importance = calculate_word_scores(prompt, attribution)
         component_importance = calculate_component_scores(words_importance.get('tokens'), component_sentences)
         return attribution, words_importance, component_importance, target,time,gpu_memory_usage
+    else:
+        attribution,target,time,gpu_memory_usage = discretize_method(model, tokenizer, prompt=prompt)
+        words_importance = calculate_word_scores(prompt, attribution)
+        component_importance = calculate_component_scores(words_importance.get('tokens'), component_sentences)
+        return attribution, words_importance, component_importance, target,time,gpu_memory_usage
+
 
 
     # if model_weight:
@@ -372,8 +491,8 @@ def only_calculate_results(prompt,model, tokenizer):
 
 
 def main(method):
-    start = 1103
-    end = start +100
+    start = 5103
+    end = start +3
 
     model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
    # method = "gradient"
@@ -391,8 +510,10 @@ def main(method):
 
 
 if __name__ == "__main__":
-    #main("gradient")
-    main("perturbation")
-    main("top_k_perturbation")
+    # main("gradient")
+    # main("perturbation")
+    #main("top_k_perturbation")
+    main("similarity")
+    main("kkk")
 
 

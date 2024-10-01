@@ -266,6 +266,7 @@ def calculate_importance_score_tokens(baseline, masked_words, encoded_prompt):
     baseline_attribute = sum(baseline_attribute) / len(baseline_attribute)
     importance_scores = (1 - sum_attributes)
     norm_scores = importance_scores / sum(importance_scores)
+    print(encoded_prompt)
     assert (len(norm_scores) == len(encoded_prompt))
     final_attributes_dict = [{
         'token': strip_tokenizer_prefix(encoded_prompt[i]),
