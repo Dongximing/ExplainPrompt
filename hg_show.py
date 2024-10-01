@@ -398,6 +398,7 @@ def new_gradient_attribution(model, tokenizer, prompt):
     # Sum the tensors along the vertical axis (dimension 0)
     vertical_sum = torch.sum(stacked_tensor, dim=0)
     vertical_sum = torch.unsqueeze(vertical_sum, 0)
+    vertical_sum = torch.unsqueeze(vertical_sum, 0)
     attr_res = llm_attr.attribute(inp, target=vertical_sum,n_steps=10)
     gpu_memory_usage = torch.cuda.max_memory_allocated(device=0)
     real_attr_res = attr_res.token_attr.cpu().detach().numpy()
