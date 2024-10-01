@@ -160,7 +160,7 @@ def generate_text_with_ig(model, tokenizer, current_input, bl=False):
     tensor_list = outputs['sequences'][0][len(inputs["input_ids"][0]):].tolist()
     for i,id in enumerate(tensor_list):
         log_probabilities = (outputs.logits)[i]
-        top_logits= log_probabilities[id]
+        top_logits= log_probabilities[0][id]
         all_top_logits.append((top_logits))
     top_indices = sorted(range(len(all_top_logits)), key=lambda x: all_top_logits[x], reverse=True)[:5]
 
