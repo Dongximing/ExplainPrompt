@@ -265,6 +265,9 @@ def similarity_method(model, tokenizer, prompt):
         'value': similarities[i],
         'position': i
     } for i, item in enumerate(tokens)]
+    print(f"\n baseline {final_attributes_dict}")
+    print("prompt",prompt)
+    print(similarities)
     end_time = time.time()
     return {
         "tokens": final_attributes_dict
