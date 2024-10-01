@@ -461,18 +461,7 @@ def run_initial_inference(prompt,method):
             token, word, component, real_output,exec_time,gpu_memory_usage = calculate_attributes(prompt,model,tokenizer,method)
 
             if token is not None:
-                data.append(
-                    {'prompt': example['prefix_query'], "real_output": real_output, "token_level": token, "word_level": word,
-                     "component_level": component,
-                     'instruction': example['instruction'],
-                     'query': example['query'],
-                     "component_range": example['component_range'],  # TODO: not a list, its a dict
-                     "instruction_weight": component[0].get("instruction"),
-                     "query_weight": component[0].get("query"),
-                     "exec_time": exec_time,
-                     "gpu_memory_usage":gpu_memory_usage
-                     }
-                )
+
                 if isinstance(word, str):
                     tokens_data = json.loads(word)
                 else:
