@@ -445,7 +445,7 @@ def new_gradient_attribution(model, tokenizer, prompt):
     print(f"{final_attributes_dict}")
     return {
         "tokens": final_attributes_dict
-    }, target, end_time - start_time, gpu_memory_usage
+    }, response, end_time - start_time, gpu_memory_usage
 
 
 
