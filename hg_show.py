@@ -1,6 +1,7 @@
 import bitsandbytes as bnb
 import torch
 from sentence_transformers import SentenceTransformer, util
+from transformers import pipeline
 import numpy as np
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
@@ -365,8 +366,57 @@ def perturbation_attribution(model, tokenizer, prompt):
     },target, end_time - start_time, gpu_memory_usage
 
 
-def discretize(model, tokenizer, prompt):
-    pass
+def new_gradient_attribution(model, tokenizer, prompt):
+    """
+    Calculate attribution using gradient method.
+
+    Parameters:
+    - model: The model to calculate the attribution for.
+    - tokenizer: The tokenizer used to tokenize the input.
+    - prompt: The input tokens for which to calculate the attribution.
+    - kwargs: Additional keyword arguments for the gradient method.
+
+    Returns:
+    - attribution: The attributions calculated using the gradient method.
+    """
+    import time
+    start_time = time.time()
+    target = generate_text(model, tokenizer, prompt)
+    emb_layer = model.get_submodule("model.embed_tokens")
+    ig = LayerIntegratedGradients(model, emb_layer)
+    llm_attr = LLMGradientAttribution(ig, tokenizer)
+    inp = TextTokenInput(
+        prompt,
+        tokenizer,
+        skip_tokens=[1],  # skip the special token for the start of the text <s>
+    )
+    target = pipeline('feature-extraction',model=model,tokenizer=tokenizer)
+    tensor_list = [torch.tensor(item) for item in target[0]]
+    stacked_tensor = torch.vstack(tensor_list)
+
+    # Sum the tensors along the vertical axis (dimension 0)
+    vertical_sum = torch.sum(stacked_tensor, dim=0)
+    attr_res = llm_attr.attribute(inp, target=vertical_sum,n_steps=10)
+    gpu_memory_usage = torch.cuda.max_memory_allocated(device=0)
+    real_attr_res = attr_res.token_attr.cpu().detach().numpy()
+    real_attr_res = np.absolute(real_attr_res)
+    real_attr_res = np.sum(real_attr_res, axis=0)
+    labels = attr_res.input_tokens
+    newer_sum_normalized_array = real_attr_res / np.sum(real_attr_res)
+    final_attributes_dict = [{
+        'token': hg_strip_tokenizer_prefix(labels[i]),
+        'type': 'input',
+        'value': newer_sum_normalized_array[i],
+        'position': i
+    } for i, item in enumerate(labels)]
+    gpu_memory_usage = gpu_memory_usage/1024/1024/1204
+    print(f"GPU Memory Usage: {gpu_memory_usage} GB")
+    end_time = time.time()
+    print(f"{final_attributes_dict}")
+    return {
+        "tokens": final_attributes_dict
+    }, target, end_time - start_time, gpu_memory_usage
+
 
 
 def gradient_attribution(model, tokenizer, prompt):
@@ -434,6 +484,10 @@ def calculate_attributes(prompt,model,tokenizer,method):
         attribution,target,time,gpu_memory_usage = perturbation_attribution(model, tokenizer, prompt=prompt)
         words_importance = calculate_word_scores(prompt, attribution)
         return attribution, words_importance, target,time,gpu_memory_usage
+    elif calculate_method == "new_gradient":
+        attribution,target,time,gpu_memory_usage = new_gradient_attribution(model, tokenizer, prompt=prompt)
+        words_importance = calculate_word_scores(prompt, attribution)
+        return attribution, words_importance,  target,time,gpu_memory_usage
 
     elif calculate_method == "gradient":
         attribution,target,time,gpu_memory_usage = gradient_attribution(model, tokenizer, prompt=prompt)
