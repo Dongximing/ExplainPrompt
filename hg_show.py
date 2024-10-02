@@ -419,12 +419,12 @@ def process_logits(result, baseline_output_ids,bb):
         a+=1
     values_list = [x.item() for x in baseline_final_socre]
     values_list = np.array(values_list)
-    print(values_list)
+    # print(values_list)
     return values_list.reshape(1, -1)
 
 
 def process_logits_candidate(result, baseline_output_ids,bb):
-    print(baseline_output_ids)
+    # print(baseline_output_ids)
     baseline_final_socre = []
     a = 0
     for ind, each_logit in enumerate(result.logits):
@@ -437,7 +437,7 @@ def process_logits_candidate(result, baseline_output_ids,bb):
     import numpy as np
     baseline_final_socre = np.array(baseline_final_socre)
     transposed_array = baseline_final_socre.T
-    print(baseline_final_socre)
+    # print(baseline_final_socre)
     return transposed_array
 
 
@@ -454,7 +454,7 @@ def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
         result = model.generate(model_input["input_ids"], temperature=0.01, max_new_tokens=max_new_tokens,
                                 return_dict_in_generate=True, output_scores=True, output_logits=True)
         baseline_output_ids = result[0]
-        print('baseline_output_ids',len(baseline_output_ids[0][real_length:]))
+        # print('baseline_output_ids',len(baseline_output_ids[0][real_length:]))
         a = len(baseline_output_ids[0][real_length:])
 
         for i, batch in enumerate(candidate_input):
@@ -483,8 +483,8 @@ def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
         adjusted_arrays = [array[:, :min_columns] for array in tenseor_List]
 
         concatenated_array = np.concatenate(adjusted_arrays, axis=0)
-        print(concatenated_array.shape)
-        print(baseline_logits.shape)
+        # print(concatenated_array.shape)
+        # print(baseline_logits.shape)
 
         min_columns = min(concatenated_array.shape[1], baseline_logits.shape[1])
         adjusted_concatenated_array = concatenated_array[:, :min_columns]
@@ -657,7 +657,7 @@ def run_initial_inference(prompt,model,tokenizer,method,max_new_tokens):
     for ind, example in enumerate([1]):
 
             token, word,  real_output,exec_time,gpu_memory_usage = calculate_attributes(prompt,model,tokenizer,method,max_new_tokens)
-
+            print('real_output',real_output)
             if token is not None:
 
                 if isinstance(word, str):
