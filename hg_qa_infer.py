@@ -593,6 +593,6 @@ if __name__ == "__main__":
     main("perturbation")
     main("similarity")
     main("discretize")
-    main("")
+    main("new_gradient")
 
 
