@@ -37,12 +37,13 @@ def load_model(model_name, bnb_config):
     max_memory = "10000MB"
 
     model = AutoModelForCausalLM.from_pretrained(
-        model_name,
-        quantization_config=bnb_config,
-        device_map="auto",  # dispatch efficiently the model on the available resources
-        max_memory={i: max_memory for i in range(n_gpus)},
+        model_name,torch_dtype=torch.float16, device_map="auto"
     )
+    model.bfloat16()
+
     tokenizer = AutoTokenizer.from_pretrained(model_name, use_auth_token=True)
+    tokenizer.pad_token = tokenizer.bos_token
+    tokenizer.padding_side = "left"
 
     # Needed for LLaMA tokenizer
     tokenizer.pad_token = tokenizer.eos_token
@@ -71,19 +72,6 @@ def generate_text(model, tokenizer,input):
     return response
 
 
-def generated_tensor_candidate(baseline):
-    number_line = baseline.shape[1]
-    output_tensor = baseline.repeat(number_line, 1)
-    mask = torch.eye(number_line, dtype=bool)
-    output_tensor[mask] = 2
-
-    return output_tensor
-
-
-def generate_candidate(original_prompt, tokenizer):
-    baseline_input = tokenizer(original_prompt, return_tensors="pt", add_special_tokens=False).to("cuda")
-    candidate_input = generated_tensor_candidate(baseline_input["input_ids"])
-    return candidate_input
 
 def generate_text_with_logit(model, tokenizer, current_input, bl=True):
     """
@@ -129,7 +117,40 @@ def generate_text_with_logit(model, tokenizer, current_input, bl=True):
         baselines.append(baseline)
     return baselines
 
+def generate_text_with_ig(model, tokenizer, current_input, max_new_tokens,bl=False):
+    """
+    Generate text using the given model and tokenizer.
 
+    Parameters:
+    - model: The model to generate text.
+    - tokenizer: The tokenizer used to tokenize the input.
+    - input: The input string(prompt string)
+
+    Returns:
+        - response: The generated text based on the input prompt.
+    """
+    if type(current_input) == str:
+        inputs = tokenizer([current_input], return_tensors="pt",add_special_tokens=False).to("cuda")
+    else:
+        inputs = tokenizer.decode(current_input[0])
+
+        inputs = tokenizer([inputs], return_tensors="pt",add_special_tokens=False).to("cuda")
+
+    outputs = model.generate(**inputs, temperature=0.01, output_logits=True, max_new_tokens=max_new_tokens,
+                             return_dict_in_generate=True, output_scores=True)
+    response = tokenizer.decode(outputs['sequences'][0][len(inputs["input_ids"][0]):], skip_special_tokens=True)
+    #print(outputs)
+    all_top_logits = []
+    # print(outputs.scores)
+    print(outputs['sequences'][0][len(inputs["input_ids"][0]):])
+    tensor_list = outputs['sequences'][0][len(inputs["input_ids"][0]):].tolist()
+    for i,id in enumerate(tensor_list):
+        log_probabilities = (outputs.logits)[i]
+        top_logits= log_probabilities[0][id]
+        all_top_logits.append((top_logits))
+    top_indices = sorted(range(len(all_top_logits)), key=lambda x: all_top_logits[x], reverse=True)[:5]
+
+    return response,top_indices
 
 def perturbation_attribution_top_k(model, tokenizer, prompt):
     """
@@ -365,9 +386,53 @@ def perturbation_attribution(model, tokenizer, prompt):
     },target, end_time - start_time, gpu_memory_usage
 
 
-def discretize(model, tokenizer, prompt):
-    pass
+def new_gradient_attribution(model, tokenizer, prompt,max_new_tokens):
+    """
+    Calculate attribution using gradient method.
 
+    Parameters:
+    - model: The model to calculate the attribution for.
+    - tokenizer: The tokenizer used to tokenize the input.
+    - prompt: The input tokens for which to calculate the attribution.
+    - kwargs: Additional keyword arguments for the gradient method.
+
+    Returns:
+    - attribution: The attributions calculated using the gradient method.
+    """
+    import time
+    start_time = time.time()
+    response, top_indices = generate_text_with_ig(model, tokenizer, prompt,max_new_tokens)
+    emb_layer = model.get_submodule("model.embed_tokens")
+    ig = LayerIntegratedGradients(model, emb_layer)
+    llm_attr = LLMGradientAttribution(ig, tokenizer)
+    inp = TextTokenInput(
+        prompt,
+        tokenizer,
+        skip_tokens=[1],  # skip the special token for the start of the text <s>
+    )
+
+    step_list = top_indices
+    #print(step_list)
+    attr_res = llm_attr.attribute(inp=inp,target= response,step_list=step_list, n_steps=10)
+    gpu_memory_usage = torch.cuda.max_memory_allocated(device=0)
+    real_attr_res = attr_res.token_attr.cpu().detach().numpy()
+    real_attr_res = np.absolute(real_attr_res)
+    real_attr_res = np.sum(real_attr_res, axis=0)
+    labels = attr_res.input_tokens
+    newer_sum_normalized_array = real_attr_res / np.sum(real_attr_res)
+    final_attributes_dict = [{
+        'token': hg_strip_tokenizer_prefix(labels[i]),
+        'type': 'input',
+        'value': newer_sum_normalized_array[i],
+        'position': i
+    } for i, item in enumerate(labels)]
+    gpu_memory_usage = gpu_memory_usage/1024/1024/1204
+    print(f"GPU Memory Usage: {gpu_memory_usage} GB")
+    end_time = time.time()
+    print(f"response---------》{response}")
+    return {
+        "tokens": final_attributes_dict
+    }, response, end_time - start_time, gpu_memory_usage
 
 def gradient_attribution(model, tokenizer, prompt):
     """
@@ -435,6 +500,10 @@ def calculate_attributes(prompt,component_sentences,model,tokenizer,method):
         words_importance = calculate_word_scores(prompt, attribution)
         component_importance = calculate_component_scores(words_importance.get('tokens'), component_sentences)
         return attribution, words_importance, component_importance, target,time,gpu_memory_usage
+    elif calculate_method == "new_gradient":
+        attribution, target, time, gpu_memory_usage = new_gradient_attribution(model, tokenizer, prompt=prompt)
+        words_importance = calculate_word_scores(prompt, attribution)
+        return attribution, words_importance, target, time, gpu_memory_usage
 
     elif calculate_method == "gradient":
         attribution,target,time,gpu_memory_usage = gradient_attribution(model, tokenizer, prompt=prompt)
@@ -471,7 +540,8 @@ def run_initial_inference(start, end,model,tokenizer,method):
     for ind, example in enumerate(df.select(range(len(df)-1))):
 
             token, word, component, real_output,exec_time,gpu_memory_usage = calculate_attributes(example['prefix_query'], example['component_range'],model,tokenizer,method)
-
+            print(word)
+            print(component)
             if token is not None:
                 data.append(
                     {'prompt': example['prefix_query'], "real_output": real_output, "token_level": token, "word_level": word,
@@ -519,10 +589,10 @@ def main(method):
 
 
 if __name__ == "__main__":
-    main("gradient")
+    #main("gradient")
     main("perturbation")
-    #main("top_k_perturbation")
     main("similarity")
-    main("kkk")
+    main("discretize")
+    main("")
 
 
