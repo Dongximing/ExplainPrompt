@@ -74,7 +74,7 @@ def generate_text(model, tokenizer,input,max_new_tokens):
 
 
 def generated_tensor_candidate(baseline):
-    input_tensor = baseline
+    input_tensor = baseline.squeeze(0)
     print(input_tensor)# Starting with a simple 1D tensor
 
     # Get the number of elements in the tensor
