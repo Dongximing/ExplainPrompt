@@ -498,7 +498,7 @@ def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
 
         newer_sum_normalized_array = real_attr_res / np.sum(real_attr_res)
         #print(newer_sum_normalized_array)
-        print(newer_sum_normalized_array)
+
         final_attributes_dict = [{
             'token': hg_strip_tokenizer_prefix(tokens[i]),
             'type': 'input',
@@ -506,7 +506,8 @@ def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
             'position': i
         } for i, item in enumerate(tokens)]
         end_time = time.time()
-        print('real_output', baseline_input)
+        print('real_output----------------》', baseline_input)
+        print(newer_sum_normalized_array)
         return {
             "tokens": final_attributes_dict
         }, baseline_input, end_time - start_time, 0
