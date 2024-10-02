@@ -491,7 +491,7 @@ def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
         adjusted_another_array = baseline_logits[:, :min_columns]
         attribute = adjusted_another_array - adjusted_concatenated_array
         real_attr_res = np.absolute(attribute)
-        real_attr_res = np.sum(real_attr_res, axis=0)
+        real_attr_res = np.sum(real_attr_res, axis=1)
         newer_sum_normalized_array = real_attr_res / np.sum(real_attr_res)
         final_attributes_dict = [{
             'token': hg_strip_tokenizer_prefix(tokens[i]),
