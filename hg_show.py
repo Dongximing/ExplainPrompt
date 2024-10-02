@@ -74,7 +74,8 @@ def generate_text(model, tokenizer,input,max_new_tokens):
 
 
 def generated_tensor_candidate(baseline):
-    input_tensor = baseline  # Starting with a simple 1D tensor
+    input_tensor = baseline
+    print(input_tensor)# Starting with a simple 1D tensor
 
     # Get the number of elements in the tensor
     result_tensors = [input_tensor[torch.arange(input_tensor.size(0)) != i] for i in range(input_tensor.size(0))]
