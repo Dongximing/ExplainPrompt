@@ -86,7 +86,7 @@ def generated_tensor_candidate(baseline):
 
     return result_tensor
 
-
+#transformers              4.40.1
 def generate_candidate(original_prompt, tokenizer):
     baseline_input = tokenizer(original_prompt, return_tensors="pt", add_special_tokens=False).to("cuda")
     candidate_input = generated_tensor_candidate(baseline_input["input_ids"])
@@ -570,7 +570,7 @@ def run_initial_inference(prompt,method,max_new_tokens):
                 fig, ax = plt.subplots(figsize=(10, 10))
                 bars = ax.bar(unique_tokens, values, color=colors)
 
-                # 设置轴标签和标题
+
                 ax.set_xlabel('Tokens')
                 ax.set_ylabel('Values')
                 ax.set_title('Token Values Visualization')
