@@ -1,3 +1,5 @@
+from http.client import responses
+
 import bitsandbytes as bnb
 import torch
 from sentence_transformers import SentenceTransformer, util
@@ -82,9 +84,11 @@ def generated_tensor_candidate(baseline):
 
 
     result_tensor = torch.stack(result_tensors)
+
+    batches = torch.split(result_tensor, 15)
     print("87----->",result_tensor)
 
-    return result_tensor
+    return batches
 
 #transformers              4.40.1
 def generate_candidate(original_prompt, tokenizer):
@@ -266,8 +270,12 @@ def similarity_method(model, tokenizer, prompt,max_new_tokens):
     model.eval()
     with torch.no_grad():
         print(candidate_input)
-        output_ids = model.generate(candidate_input, max_new_tokens=max_new_tokens, temperature=0.2)
-        response = tokenizer.batch_decode(output_ids[:, real_length:], skip_special_tokens=True)
+        responses = []
+        for i,batch in enumerate(candidate_input):
+            output_ids = model.generate(batch, max_new_tokens=max_new_tokens, temperature=0.2)
+            response = tokenizer.batch_decode(output_ids[:, real_length:], skip_special_tokens=True)
+            responses.append(response)
+        flattened_list = [item for sublist in responses for item in sublist]
 
 
     # Load the model
@@ -278,7 +286,7 @@ def similarity_method(model, tokenizer, prompt,max_new_tokens):
 
     # Define the query and the list of sentences
     query = baseline_input
-    sentences = response
+    sentences = flattened_list
 
     # Encode the query and sentences to get their embeddings
     query_embedding = sentence_model.encode(query, convert_to_tensor=True)
@@ -318,10 +326,14 @@ def discretize_method(model, tokenizer, prompt,max_new_tokens):
     start_time = time.time()
 
     with torch.no_grad():
-        output_ids = model.generate(candidate_input, max_new_tokens=max_new_tokens, temperature=0.1)
+        responses = []
+        for i, batch in enumerate(candidate_input):
+            output_ids = model.generate(batch, max_new_tokens=max_new_tokens, temperature=0.1)
         #     print(output_ids)
-        response = tokenizer.batch_decode(output_ids[:, real_length:], skip_special_tokens=True)
-        output_ids = model.generate(model_input["input_ids"], max_new_tokens=max_new_tokens, temperature=0.1)[0]
+            response = tokenizer.batch_decode(output_ids[:, real_length:], skip_special_tokens=True)
+            responses.append(response)
+            output_ids = model.generate(model_input["input_ids"], max_new_tokens=max_new_tokens, temperature=0.1)[0]
+        flattened_list = [item for sublist in responses for item in sublist]
         baseline_input = tokenizer.decode(output_ids[len(model_input['input_ids'][0][:]):], skip_special_tokens=True)
 
 
@@ -330,7 +342,7 @@ def discretize_method(model, tokenizer, prompt,max_new_tokens):
     print(f"GPU Memory Usage: {gpu_memory_usage} GB")
     scores = []
     baseline_input_tokens = tokenizer.tokenize(baseline_input)
-    tokenized_texts_tokens = [tokenizer.tokenize(text) for text in response]
+    tokenized_texts_tokens = [tokenizer.tokenize(text) for text in flattened_list]
     for token in tokenized_texts_tokens:
         score = do_comparison(baseline_input_tokens,token)
         scores.append(1 - score)
@@ -437,6 +449,7 @@ def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
     tokens = tokenizer.convert_ids_to_tokens(model_input['input_ids'].squeeze(0))
     import time
     start_time = time.time()
+    tenseor_List = []
     with torch.no_grad():
         result = model.generate(model_input["input_ids"], temperature=0.01, max_new_tokens=max_new_tokens,
                                 return_dict_in_generate=True, output_scores=True, output_logits=True)
@@ -444,31 +457,37 @@ def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
         print('baseline_output_ids',len(baseline_output_ids[0][real_length:]))
         a = len(baseline_output_ids[0][real_length:])
 
+        for i, batch in enumerate(candidate_input):
 
-        candidate_result = model.generate(candidate_input, temperature=0.01, output_logits=True,
+            candidate_result = model.generate(batch, temperature=0.01, output_logits=True,
                                           max_new_tokens=max_new_tokens,
                                           return_dict_in_generate=True, output_scores=True)
 
-        # print((output_ids.logits[4]).size())
-        candidate_result_respone = candidate_result[0]
-        response = tokenizer.batch_decode(candidate_result_respone[:, real_length - 1:], skip_special_tokens=True)
-        print('baseline_output_ids',candidate_result_respone[:, real_length - 1:].size()[1])
-        b = candidate_result_respone[:, real_length - 1:].size()[1]
-        if a >= b:
-            bb = b
-        else:
-            bb = a
-        gpu_memory_usage = torch.cuda.max_memory_allocated(device=0)
-        gpu_memory_usage = gpu_memory_usage / 1024 / 1024 / 1204
-        print(f"GPU Memory Usage: {gpu_memory_usage} GB")
+            candidate_result_respone = candidate_result[0]
 
-        print('-----------------------------------------------------',bb)
-        baseline_logits = process_logits(result, baseline_output_ids[0][real_length:],bb)
-        candidate_logits = process_logits_candidate(candidate_result, baseline_output_ids[0][real_length:],bb)
+            b = candidate_result_respone[:, real_length - 1:].size()[1]
+            if a >= b:
+                bb = b
+            else:
+                bb = a
+
+            baseline_logits = process_logits(result, baseline_output_ids[0][real_length:],bb)
+            candidate_logits = process_logits_candidate(candidate_result, baseline_output_ids[0][real_length:],bb)
+            tenseor_List.append(candidate_logits)
 
         baseline_input = tokenizer.decode(baseline_output_ids[len(model_input['input_ids'][0][:]):],
                                           skip_special_tokens=True)
-        attribute = baseline_logits - candidate_logits
+
+        min_columns = min(array.shape[1] for array in tenseor_List)
+
+        adjusted_arrays = [array[:, :min_columns] for array in tenseor_List]
+
+        concatenated_array = np.concatenate(adjusted_arrays, axis=1)
+
+        min_columns = min(concatenated_array.shape[1], baseline_logits.shape[1])
+        adjusted_concatenated_array = concatenated_array[:, :min_columns]
+        adjusted_another_array = baseline_logits[:, :min_columns]
+        attribute = adjusted_another_array - adjusted_concatenated_array
         real_attr_res = np.absolute(attribute)
         real_attr_res = np.sum(real_attr_res, axis=0)
         newer_sum_normalized_array = real_attr_res / np.sum(real_attr_res)
@@ -481,7 +500,7 @@ def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
         end_time = time.time()
         return {
             "tokens": final_attributes_dict
-        }, baseline_input, end_time - start_time, gpu_memory_usage
+        }, baseline_input, end_time - start_time, 0
 
 
 
