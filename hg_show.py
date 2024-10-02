@@ -402,7 +402,7 @@ def process_logits(result, baseline_output_ids,bb):
     for ind, each_logit in enumerate(result.logits):
         log_probs = torch.nn.functional.log_softmax(each_logit, dim=1)
         baseline_final_socre.append(log_probs[0][baseline_output_ids[ind]])
-        if a == bb:
+        if a == bb-1:
             break
         a+=1
     values_list = [x.item() for x in baseline_final_socre]
@@ -418,7 +418,7 @@ def process_logits_candidate(result, baseline_output_ids,bb):
     for ind, each_logit in enumerate(result.logits):
         log_probs = torch.nn.functional.log_softmax(each_logit, dim=1)
         baseline_final_socre.append(log_probs[:, baseline_output_ids[ind]].tolist())
-        if a == bb:
+        if a == bb-1:
             break
         a+=1
 
@@ -462,7 +462,7 @@ def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
         gpu_memory_usage = gpu_memory_usage / 1024 / 1024 / 1204
         print(f"GPU Memory Usage: {gpu_memory_usage} GB")
 
-        print('-----------------------------------------------------')
+        print('-----------------------------------------------------',bb)
         baseline_logits = process_logits(result, baseline_output_ids[0][real_length:],bb)
         candidate_logits = process_logits_candidate(candidate_result, baseline_output_ids[0][real_length:],bb)
 
