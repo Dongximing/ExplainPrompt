@@ -270,6 +270,7 @@ def similarity_method(model, tokenizer, prompt,max_new_tokens):
     start_time = time.time()
     model.eval()
     with torch.no_grad():
+        print(candidate_input)
         output_ids = model.generate(candidate_input, max_new_tokens=max_new_tokens, temperature=0.2)
         response = tokenizer.batch_decode(output_ids[:, real_length:], skip_special_tokens=True)
 
