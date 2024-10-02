@@ -478,8 +478,9 @@ def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
             candidate_logits = process_logits_candidate(candidate_result, baseline_output_ids[0][real_length:],bb)
             tenseor_List.append(candidate_logits)
 
-        baseline_input = tokenizer.decode(baseline_output_ids,
+        baseline_input = tokenizer.decode(baseline_output_ids[0][real_length:],
                                           skip_special_tokens=True)
+        print('real_output----------------》', baseline_input)
 
         min_columns = min(array.shape[1] for array in tenseor_List)
 
@@ -506,7 +507,7 @@ def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
             'position': i
         } for i, item in enumerate(tokens)]
         end_time = time.time()
-        print('real_output----------------》', baseline_input)
+
         print(newer_sum_normalized_array)
         return {
             "tokens": final_attributes_dict
