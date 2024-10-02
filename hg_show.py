@@ -84,6 +84,7 @@ def generated_tensor_candidate(baseline):
 
     # Stack the results to form the final 2D tensor
     result_tensor = torch.stack(combinations)
+    print("87",result_tensor)
 
     return result_tensor
 
