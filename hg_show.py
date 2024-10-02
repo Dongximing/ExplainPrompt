@@ -420,7 +420,7 @@ def process_logits(result, baseline_output_ids,bb):
     values_list = [x.item() for x in baseline_final_socre]
     values_list = np.array(values_list)
     print(values_list)
-    return values_list
+    return values_list.reshape(1, -1)
 
 
 def process_logits_candidate(result, baseline_output_ids,bb):
