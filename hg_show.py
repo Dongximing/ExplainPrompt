@@ -494,7 +494,7 @@ def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
         real_attr_res = np.sum(real_attr_res, axis=1)
 
         newer_sum_normalized_array = real_attr_res / np.sum(real_attr_res)
-        print(newer_sum_normalized_array.size())
+        #print(newer_sum_normalized_array)
         print(newer_sum_normalized_array)
         final_attributes_dict = [{
             'token': hg_strip_tokenizer_prefix(tokens[i]),
