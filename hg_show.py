@@ -484,6 +484,7 @@ def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
 
         concatenated_array = np.concatenate(adjusted_arrays, axis=0)
         print(concatenated_array.shape)
+        print(baseline_logits.shape)
 
         min_columns = min(concatenated_array.shape[1], baseline_logits.shape[1])
         adjusted_concatenated_array = concatenated_array[:, :min_columns]
