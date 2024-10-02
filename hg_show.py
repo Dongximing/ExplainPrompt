@@ -395,6 +395,82 @@ def perturbation_attribution(model, tokenizer, prompt,max_new_tokens):
     },target, end_time - start_time, gpu_memory_usage
 
 
+def process_logits(result, baseline_output_ids):
+    print(baseline_output_ids)
+    baseline_final_socre = []
+    for ind, each_logit in enumerate(result.logits):
+        log_probs = torch.nn.functional.log_softmax(each_logit, dim=1)
+        baseline_final_socre.append(log_probs[0][baseline_output_ids[ind]])
+    values_list = [x.item() for x in baseline_final_socre]
+    values_list = np.array(values_list)
+    print(values_list)
+    return values_list
+
+
+def process_logits_candidate(result, baseline_output_ids):
+    print(baseline_output_ids)
+    baseline_final_socre = []
+    for ind, each_logit in enumerate(result.logits):
+        log_probs = torch.nn.functional.log_softmax(each_logit, dim=1)
+        baseline_final_socre.append(log_probs[:, baseline_output_ids[ind]].tolist())
+
+    import numpy as np
+    baseline_final_socre = np.array(baseline_final_socre)
+    transposed_array = baseline_final_socre.T
+    print(baseline_final_socre)
+    return transposed_array
+
+
+
+def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
+    model_input = tokenizer(prompt, return_tensors="pt", add_special_tokens=False).to("cuda")
+    real_length = len(model_input['input_ids'][0][:])
+    candidate_input = generate_candidate(prompt, tokenizer)
+    tokens = tokenizer.convert_ids_to_tokens(model_input['input_ids'].squeeze(0))
+    import time
+    start_time = time.time()
+    with torch.no_grad():
+        result = model.generate(model_input["input_ids"], temperature=0.01, max_new_tokens=max_new_tokens,
+                                return_dict_in_generate=True, output_scores=True, output_logits=True)
+        baseline_output_ids = result[0]
+        baseline_logits = process_logits(result, baseline_output_ids[0][real_length:])
+
+        candidate_result = model.generate(candidate_input, temperature=0.01, output_logits=True,
+                                          max_new_tokens=max_new_tokens,
+                                          return_dict_in_generate=True, output_scores=True)
+
+        # print((output_ids.logits[4]).size())
+        candidate_result_respone = candidate_result[0]
+        response = tokenizer.batch_decode(candidate_result_respone[:, real_length - 1:], skip_special_tokens=True)
+
+        gpu_memory_usage = torch.cuda.max_memory_allocated(device=0)
+        gpu_memory_usage = gpu_memory_usage / 1024 / 1024 / 1204
+        print(f"GPU Memory Usage: {gpu_memory_usage} GB")
+
+        print('-----------------------------------------------------')
+
+        candidate_logits = process_logits_candidate(candidate_result, baseline_output_ids[0][real_length:])
+        print((baseline_output_ids.logits[0]).size())
+        baseline_input = tokenizer.decode(baseline_output_ids[len(model_input['input_ids'][0][:]):],
+                                          skip_special_tokens=True)
+        attribute = baseline_logits - candidate_logits
+        real_attr_res = np.absolute(attribute)
+        real_attr_res = np.sum(real_attr_res, axis=0)
+        newer_sum_normalized_array = real_attr_res / np.sum(real_attr_res)
+        final_attributes_dict = [{
+            'token': hg_strip_tokenizer_prefix(tokens[i]),
+            'type': 'input',
+            'value': newer_sum_normalized_array[i],
+            'position': i
+        } for i, item in enumerate(tokens)]
+        end_time = time.time()
+        return {
+            "tokens": final_attributes_dict
+        }, baseline_input, end_time - start_time, gpu_memory_usage
+
+
+
+
 def new_gradient_attribution(model, tokenizer, prompt,max_new_tokens):
     """
     Calculate attribution using gradient method.
@@ -422,7 +498,7 @@ def new_gradient_attribution(model, tokenizer, prompt,max_new_tokens):
 
     step_list = top_indices
     #print(step_list)
-    attr_res = llm_attr.attribute(inp=inp,target= response,step_list=[0,1,2,3,4,5,6,7,8,9], n_steps=10)
+    attr_res = llm_attr.attribute(inp=inp,target= response,step_list=step_list, n_steps=10)
     gpu_memory_usage = torch.cuda.max_memory_allocated(device=0)
     real_attr_res = attr_res.token_attr.cpu().detach().numpy()
     real_attr_res = np.absolute(real_attr_res)
@@ -521,6 +597,10 @@ def calculate_attributes(prompt,model,tokenizer,method,max_new_tokens):
         return attribution, words_importance,  target,time,gpu_memory_usage
     elif calculate_method == "top_k_perturbation":
         attribution,target,time,gpu_memory_usage = perturbation_attribution_top_k(model, tokenizer, prompt=prompt,max_new_tokens=max_new_tokens)
+        words_importance = calculate_word_scores(prompt, attribution)
+        return attribution, words_importance,  target,time,gpu_memory_usage
+    elif calculate_method == "new_perturbation":
+        attribution,target,time,gpu_memory_usage = new_logit_parallel(model, tokenizer, prompt=prompt,max_new_tokens=max_new_tokens)
         words_importance = calculate_word_scores(prompt, attribution)
         return attribution, words_importance,  target,time,gpu_memory_usage
     elif calculate_method == "similarity":

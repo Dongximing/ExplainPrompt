@@ -116,6 +116,9 @@ def generate_text_with_logit(model, tokenizer, current_input, bl=True):
             baseline.append(token)
         baselines.append(baseline)
     return baselines
+def new_logit_parallel(model, tokenizer, max_new_tokens):
+    pass
+
 
 def generate_text_with_ig(model, tokenizer, current_input, max_new_tokens,bl=False):
     """
