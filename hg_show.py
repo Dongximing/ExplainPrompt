@@ -450,7 +450,7 @@ def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
         print('-----------------------------------------------------')
 
         candidate_logits = process_logits_candidate(candidate_result, baseline_output_ids[0][real_length:])
-        print((baseline_output_ids.logits[0]).size())
+
         baseline_input = tokenizer.decode(baseline_output_ids[len(model_input['input_ids'][0][:]):],
                                           skip_special_tokens=True)
         attribute = baseline_logits - candidate_logits
