@@ -88,7 +88,7 @@ def generated_tensor_candidate(baseline):
 
 #transformers              4.40.1
 def generate_candidate(original_prompt, tokenizer):
-    baseline_input = tokenizer(original_prompt, return_tensors="pt", add_special_tokens=False).to("cuda")
+    baseline_input = tokenizer(original_prompt, return_tensors="pt", add_special_tokens=False,padding=True).to("cuda")
     candidate_input = generated_tensor_candidate(baseline_input["input_ids"])
     return candidate_input
 
