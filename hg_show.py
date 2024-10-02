@@ -74,12 +74,18 @@ def generate_text(model, tokenizer,input,max_new_tokens):
 
 
 def generated_tensor_candidate(baseline):
-    number_line = baseline.shape[1]
-    output_tensor = baseline.repeat(number_line, 1)
-    mask = torch.eye(number_line, dtype=bool)
-    output_tensor[mask] = 2
+    input_tensor = baseline  # Starting with a simple 1D tensor
 
-    return output_tensor
+    # Get the number of elements in the tensor
+    n = input_tensor.size(0)
+
+    # Generate all combinations of indices for n-1 elements
+    combinations = [input_tensor[torch.arange(n) != i] for i in range(n)]
+
+    # Stack the results to form the final 2D tensor
+    result_tensor = torch.stack(combinations)
+
+    return result_tensor
 
 
 def generate_candidate(original_prompt, tokenizer):
@@ -247,7 +253,7 @@ def generated_tensor_candidate(baseline):
     number_line = baseline.shape[1]
     output_tensor = baseline.repeat(number_line, 1)
     mask = torch.eye(number_line, dtype=bool)
-    output_tensor[mask] = 2
+    output_tensor[mask] = 0
 
     return output_tensor
 
