@@ -250,13 +250,7 @@ def do_comparison(cleaned_baseline, candidate_token):
     average = sum(marks) / len(comparison_set)
     return average
 #     return mask
-def generated_tensor_candidate(baseline):
-    number_line = baseline.shape[1]
-    output_tensor = baseline.repeat(number_line, 1)
-    mask = torch.eye(number_line, dtype=bool)
-    output_tensor[mask] = 0
 
-    return output_tensor
 
 
 def generate_candidate(original_prompt, tokenizer):
