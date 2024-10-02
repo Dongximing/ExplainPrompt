@@ -395,24 +395,32 @@ def perturbation_attribution(model, tokenizer, prompt,max_new_tokens):
     },target, end_time - start_time, gpu_memory_usage
 
 
-def process_logits(result, baseline_output_ids):
+def process_logits(result, baseline_output_ids,bb):
     print(baseline_output_ids)
     baseline_final_socre = []
+    a = 0
     for ind, each_logit in enumerate(result.logits):
         log_probs = torch.nn.functional.log_softmax(each_logit, dim=1)
         baseline_final_socre.append(log_probs[0][baseline_output_ids[ind]])
+        if a == bb:
+            break
+        a+=1
     values_list = [x.item() for x in baseline_final_socre]
     values_list = np.array(values_list)
     print(values_list)
     return values_list
 
 
-def process_logits_candidate(result, baseline_output_ids):
+def process_logits_candidate(result, baseline_output_ids,bb):
     print(baseline_output_ids)
     baseline_final_socre = []
+    a = 0
     for ind, each_logit in enumerate(result.logits):
         log_probs = torch.nn.functional.log_softmax(each_logit, dim=1)
         baseline_final_socre.append(log_probs[:, baseline_output_ids[ind]].tolist())
+        if a == bb:
+            break
+        a+=1
 
     import numpy as np
     baseline_final_socre = np.array(baseline_final_socre)
@@ -433,8 +441,9 @@ def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
         result = model.generate(model_input["input_ids"], temperature=0.01, max_new_tokens=max_new_tokens,
                                 return_dict_in_generate=True, output_scores=True, output_logits=True)
         baseline_output_ids = result[0]
-        print('baseline_output_ids',baseline_output_ids[0][real_length:])
-        baseline_logits = process_logits(result, baseline_output_ids[0][real_length:])
+        print('baseline_output_ids',len(baseline_output_ids[0][real_length:]))
+        a = len(baseline_output_ids[0][real_length:])
+
 
         candidate_result = model.generate(candidate_input, temperature=0.01, output_logits=True,
                                           max_new_tokens=max_new_tokens,
@@ -443,15 +452,19 @@ def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
         # print((output_ids.logits[4]).size())
         candidate_result_respone = candidate_result[0]
         response = tokenizer.batch_decode(candidate_result_respone[:, real_length - 1:], skip_special_tokens=True)
-        print('baseline_output_ids',candidate_result_respone[:, real_length - 1:].size())
-
+        print('baseline_output_ids',candidate_result_respone[:, real_length - 1:].size()[1])
+        b = candidate_result_respone[:, real_length - 1:].size()[1]
+        if a >= b:
+            bb = b
+        else:
+            bb = a
         gpu_memory_usage = torch.cuda.max_memory_allocated(device=0)
         gpu_memory_usage = gpu_memory_usage / 1024 / 1024 / 1204
         print(f"GPU Memory Usage: {gpu_memory_usage} GB")
 
         print('-----------------------------------------------------')
-
-        candidate_logits = process_logits_candidate(candidate_result, baseline_output_ids[0][real_length:])
+        baseline_logits = process_logits(result, baseline_output_ids[0][real_length:],bb)
+        candidate_logits = process_logits_candidate(candidate_result, baseline_output_ids[0][real_length:],bb)
 
         baseline_input = tokenizer.decode(baseline_output_ids[len(model_input['input_ids'][0][:]):],
                                           skip_special_tokens=True)
