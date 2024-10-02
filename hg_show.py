@@ -454,7 +454,7 @@ def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
     start_time = time.time()
     tenseor_List = []
     with torch.no_grad():
-        result = model.generate(model_input["input_ids"], temperature=0.1, max_new_tokens=max_new_tokens,
+        result = model.generate(model_input["input_ids"], temperature=0.01, max_new_tokens=max_new_tokens,
                                 return_dict_in_generate=True, output_scores=True, output_logits=True)
         baseline_output_ids = result[0]
         print('baseline_output_ids',baseline_output_ids[0][real_length:])
@@ -462,7 +462,7 @@ def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
 
         for i, batch in enumerate(candidate_input):
 
-            candidate_result = model.generate(batch, temperature=0.1, output_logits=True,
+            candidate_result = model.generate(batch, temperature=0.01, output_logits=True,
                                           max_new_tokens=max_new_tokens,
                                           return_dict_in_generate=True, output_scores=True)
 
