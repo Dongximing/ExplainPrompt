@@ -250,10 +250,6 @@ def do_comparison(cleaned_baseline, candidate_token):
 
 
 
-def generate_candidate(original_prompt, tokenizer):
-    baseline_input = tokenizer(original_prompt, return_tensors="pt", add_special_tokens=False).to("cuda")
-    candidate_input = generated_tensor_candidate(baseline_input["input_ids"])
-    return candidate_input
 def similarity_method(model, tokenizer, prompt,max_new_tokens):
     model_input = tokenizer(prompt, return_tensors="pt", add_special_tokens=False).to("cuda")
     model.eval()
@@ -369,7 +365,7 @@ def perturbation_attribution(model, tokenizer, prompt,max_new_tokens):
     """
     import time
     start_time = time.time()
-    target = generate_text(model, tokenizer, prompt)
+    target = generate_text(model, tokenizer, prompt,max_new_tokens)
     attribution = FeatureAblation(model)
     llm_attr = LLMAttribution(attribution, tokenizer)
     inp = TextTokenInput(
