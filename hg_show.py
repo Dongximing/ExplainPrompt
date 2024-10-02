@@ -81,7 +81,7 @@ def generated_tensor_candidate(baseline):
 
 
     result_tensor = torch.stack(result_tensors)
-    print("87",result_tensor)
+    print("87----->",result_tensor)
 
     return result_tensor
 
