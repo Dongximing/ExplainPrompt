@@ -433,6 +433,7 @@ def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
         result = model.generate(model_input["input_ids"], temperature=0.01, max_new_tokens=max_new_tokens,
                                 return_dict_in_generate=True, output_scores=True, output_logits=True)
         baseline_output_ids = result[0]
+        print('baseline_output_ids',baseline_output_ids[0][real_length:])
         baseline_logits = process_logits(result, baseline_output_ids[0][real_length:])
 
         candidate_result = model.generate(candidate_input, temperature=0.01, output_logits=True,
@@ -442,6 +443,7 @@ def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
         # print((output_ids.logits[4]).size())
         candidate_result_respone = candidate_result[0]
         response = tokenizer.batch_decode(candidate_result_respone[:, real_length - 1:], skip_special_tokens=True)
+        print('baseline_output_ids',candidate_result_respone[:, real_length - 1:].size())
 
         gpu_memory_usage = torch.cuda.max_memory_allocated(device=0)
         gpu_memory_usage = gpu_memory_usage / 1024 / 1024 / 1204
