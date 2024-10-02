@@ -21,6 +21,103 @@ from captum.attr import (
 import pickle
 from utils import generate_original_tokens_level_attribute
 
+def process_logits(result, baseline_output_ids,bb):
+    print(baseline_output_ids)
+    baseline_final_socre = []
+    a = 0
+    for ind, each_logit in enumerate(result.logits):
+        log_probs = torch.nn.functional.log_softmax(each_logit, dim=1)
+        baseline_final_socre.append(log_probs[0][baseline_output_ids[ind]])
+        if a == bb-1:
+            break
+        a+=1
+    values_list = [x.item() for x in baseline_final_socre]
+    values_list = np.array(values_list)
+    # print(values_list)
+    return values_list.reshape(1, -1)
+
+
+def process_logits_candidate(result, baseline_output_ids,bb):
+    # print(baseline_output_ids)
+    baseline_final_socre = []
+    a = 0
+    for ind, each_logit in enumerate(result.logits):
+        log_probs = torch.nn.functional.log_softmax(each_logit, dim=1)
+        baseline_final_socre.append(log_probs[:, baseline_output_ids[ind]].tolist())
+        if a == bb-1:
+            break
+        a+=1
+
+    import numpy as np
+    baseline_final_socre = np.array(baseline_final_socre)
+    transposed_array = baseline_final_socre.T
+    # print(baseline_final_socre)
+    return transposed_array
+
+def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
+    model_input = tokenizer(prompt, return_tensors="pt", add_special_tokens=False).to("cuda")
+    real_length = len(model_input['input_ids'][0][:])
+    candidate_input = generate_candidate(prompt, tokenizer)
+    tokens = tokenizer.convert_ids_to_tokens(model_input['input_ids'].squeeze(0))
+    import time
+    start_time = time.time()
+    tenseor_List = []
+    with torch.no_grad():
+        result = model.generate(model_input["input_ids"], temperature=0.01, max_new_tokens=max_new_tokens,
+                                return_dict_in_generate=True, output_scores=True, output_logits=True)
+        baseline_output_ids = result[0]
+        # print('baseline_output_ids',len(baseline_output_ids[0][real_length:]))
+        a = len(baseline_output_ids[0][real_length:])
+
+        for i, batch in enumerate(candidate_input):
+
+            candidate_result = model.generate(batch, temperature=0.01, output_logits=True,
+                                          max_new_tokens=max_new_tokens,
+                                          return_dict_in_generate=True, output_scores=True)
+
+            candidate_result_respone = candidate_result[0]
+
+            b = candidate_result_respone[:, real_length - 1:].size()[1]
+            if a >= b:
+                bb = b
+            else:
+                bb = a
+
+            baseline_logits = process_logits(result, baseline_output_ids[0][real_length:],bb)
+            candidate_logits = process_logits_candidate(candidate_result, baseline_output_ids[0][real_length:],bb)
+            tenseor_List.append(candidate_logits)
+
+        baseline_input = tokenizer.decode(baseline_output_ids[len(model_input['input_ids'][0][:]):],
+                                          skip_special_tokens=True)
+
+        min_columns = min(array.shape[1] for array in tenseor_List)
+
+        adjusted_arrays = [array[:, :min_columns] for array in tenseor_List]
+
+        concatenated_array = np.concatenate(adjusted_arrays, axis=0)
+        # print(concatenated_array.shape)
+        # print(baseline_logits.shape)
+
+        min_columns = min(concatenated_array.shape[1], baseline_logits.shape[1])
+        adjusted_concatenated_array = concatenated_array[:, :min_columns]
+        adjusted_another_array = baseline_logits[:, :min_columns]
+        attribute = adjusted_another_array - adjusted_concatenated_array
+        real_attr_res = np.absolute(attribute)
+        real_attr_res = np.sum(real_attr_res, axis=0)
+        newer_sum_normalized_array = real_attr_res / np.sum(real_attr_res)
+        final_attributes_dict = [{
+            'token': hg_strip_tokenizer_prefix(tokens[i]),
+            'type': 'input',
+            'value': newer_sum_normalized_array[i],
+            'position': i
+        } for i, item in enumerate(tokens)]
+        end_time = time.time()
+        return {
+            "tokens": final_attributes_dict
+        }, baseline_input, end_time - start_time, 0
+
+
+
 
 def load_model(model_name, bnb_config):
     """
@@ -231,15 +328,22 @@ def do_comparison(cleaned_baseline, candidate_token):
     marks = [1 if token in candidate_set else 0 for token in comparison_set]
     average = sum(marks) / len(comparison_set)
     return average
-#     return mask
-def generated_tensor_candidate(baseline):
-    number_line = baseline.shape[1]
-    output_tensor = baseline.repeat(number_line, 1)
-    mask = torch.eye(number_line, dtype=bool)
-    output_tensor[mask] = 2
-
     return output_tensor
 
+def generated_tensor_candidate(baseline):
+    input_tensor = baseline.squeeze(0)
+    print(input_tensor)# Starting with a simple 1D tensor
+
+    # Get the number of elements in the tensor
+    result_tensors = [input_tensor[torch.arange(input_tensor.size(0)) != i] for i in range(input_tensor.size(0))]
+
+
+    result_tensor = torch.stack(result_tensors)
+
+    batches = torch.split(result_tensor, 15)
+    print("87----->",result_tensor)
+
+    return batches
 
 def generate_candidate(original_prompt, tokenizer):
     baseline_input = tokenizer(original_prompt, return_tensors="pt", add_special_tokens=False).to("cuda")
@@ -563,6 +667,7 @@ def run_initial_inference(start, end,model,tokenizer,method):
     result = pd.DataFrame(data)
 
     return result
+
 
 
 def only_calculate_results(prompt,model, tokenizer):
