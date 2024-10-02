@@ -559,7 +559,7 @@ def run_initial_inference(prompt,method,max_new_tokens):
                 if isinstance(word, str):
                     tokens_data = json.loads(word)
                 else:
-                    tokens_data = word
+                    tokens_data = token
 
                 word_count = {}
                 unique_tokens = []
