@@ -506,6 +506,7 @@ def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
             'position': i
         } for i, item in enumerate(tokens)]
         end_time = time.time()
+        print('real_output', baseline_input)
         return {
             "tokens": final_attributes_dict
         }, baseline_input, end_time - start_time, 0
@@ -663,7 +664,7 @@ def run_initial_inference(prompt,model,tokenizer,method,max_new_tokens):
     for ind, example in enumerate([1]):
 
             token, word,  real_output,exec_time,gpu_memory_usage = calculate_attributes(prompt,model,tokenizer,method,max_new_tokens)
-            print('real_output',real_output)
+
             if token is not None:
 
                 if isinstance(word, str):
