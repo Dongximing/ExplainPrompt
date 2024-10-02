@@ -677,17 +677,17 @@ def run_initial_inference(prompt,model,tokenizer,method,max_new_tokens):
                     unique_tokens.append(unique_token)
                 values = [token['value'] for token in tokens_data['tokens']]
 
-                norm = plt.Normalize(min(values), max(values))  # 归一化值范围
-                colors = cm.viridis(norm(values))  # 生成颜色映射
+                norm = plt.Normalize(min(values), max(values))
+                colors = cm.viridis(norm(values))
 
-                fig, ax = plt.subplots(figsize=(10, 10))
+                fig, ax = plt.subplots(figsize=(3, 10))
                 bars = ax.bar(unique_tokens, values, color=colors)
 
 
                 ax.set_xlabel('Tokens')
                 ax.set_ylabel('Values')
                 ax.set_title('Token Values Visualization')
-                plt.xticks(rotation=90)  # 标签可能需要旋转以提高可读性
+                plt.xticks(rotation=90)
 
                 # 添加颜色条
                 plt.colorbar(cm.ScalarMappable(norm=norm, cmap='viridis'), ax=ax)
