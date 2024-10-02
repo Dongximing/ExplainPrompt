@@ -406,7 +406,7 @@ def perturbation_attribution(model, tokenizer, prompt,max_new_tokens):
     },target, end_time - start_time, gpu_memory_usage
 
 
-def new_gradient_attribution(model, tokenizer, prompt):
+def new_gradient_attribution(model, tokenizer, prompt,max_new_tokens):
     """
     Calculate attribution using gradient method.
 
@@ -421,7 +421,7 @@ def new_gradient_attribution(model, tokenizer, prompt):
     """
     import time
     start_time = time.time()
-    response, top_indices = generate_text_with_ig(model, tokenizer, prompt)
+    response, top_indices = generate_text_with_ig(model, tokenizer, prompt,max_new_tokens)
     emb_layer = model.get_submodule("model.embed_tokens")
     ig = LayerIntegratedGradients(model, emb_layer)
     llm_attr = LLMGradientAttribution(ig, tokenizer)
@@ -522,7 +522,7 @@ def calculate_attributes(prompt,model,tokenizer,method,max_new_tokens):
         words_importance = calculate_word_scores(prompt, attribution)
         return attribution, words_importance, target,time,gpu_memory_usage
     elif calculate_method == "new_gradient":
-        attribution,target,time,gpu_memory_usage = new_gradient_attribution(model, tokenizer, prompt=prompt,max_new_tokens=max_new_tokens)
+        attribution,target,time,gpu_memory_usage = new_gradient_attribution(model, tokenizer, prompt=prompt, max_new_tokens=max_new_tokens)
         words_importance = calculate_word_scores(prompt, attribution)
         return attribution, words_importance,  target,time,gpu_memory_usage
 
