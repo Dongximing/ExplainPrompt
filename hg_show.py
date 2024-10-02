@@ -413,7 +413,7 @@ def process_logits(result, baseline_output_ids,bb):
     a = 0
     for ind, each_logit in enumerate(result.logits):
         log_probs = torch.nn.functional.log_softmax(each_logit, dim=1)
-        target_probs = torch.exp(target_log_probs)
+
         baseline_final_socre.append(log_probs[0][baseline_output_ids[ind]])
         if a == bb-1:
             break
