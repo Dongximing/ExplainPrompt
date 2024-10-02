@@ -155,23 +155,25 @@ def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
         # print(concatenated_array.shape)
         # print(baseline_logits.shape)
 
-        min_columns = min(concatenated_array.shape[1], baseline_logits.shape[1])
-        adjusted_concatenated_array = concatenated_array[:, :min_columns]
-        adjusted_another_array = baseline_logits[:, :min_columns]
-        attribute = adjusted_another_array - adjusted_concatenated_array
-        real_attr_res = np.absolute(attribute)
-        real_attr_res = np.sum(real_attr_res, axis=0)
-        newer_sum_normalized_array = real_attr_res / np.sum(real_attr_res)
-        final_attributes_dict = [{
-            'token': hg_strip_tokenizer_prefix(tokens[i]),
-            'type': 'input',
-            'value': newer_sum_normalized_array[i],
-            'position': i
-        } for i, item in enumerate(tokens)]
-        end_time = time.time()
-        return {
-            "tokens": final_attributes_dict
-        }, baseline_input, end_time - start_time, 0
+    min_columns = min(concatenated_array.shape[1], baseline_logits.shape[1])
+    adjusted_concatenated_array = concatenated_array[:, :min_columns]
+    adjusted_another_array = baseline_logits[:, :min_columns]
+    attribute = adjusted_another_array - adjusted_concatenated_array
+    real_attr_res = np.absolute(attribute)
+    real_attr_res = np.sum(real_attr_res, axis=0)
+    newer_sum_normalized_array = real_attr_res / np.sum(real_attr_res)
+    print("newer_sum_normalized_array",newer_sum_normalized_array)
+    print("tokens",tokens)
+    final_attributes_dict = [{
+        'token': hg_strip_tokenizer_prefix(tokens[i]),
+        'type': 'input',
+        'value': newer_sum_normalized_array[i],
+        'position': i
+    } for i, item in enumerate(tokens)]
+    end_time = time.time()
+    return {
+        "tokens": final_attributes_dict
+    }, baseline_input, end_time - start_time, 0
 
 
 
