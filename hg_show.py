@@ -482,7 +482,8 @@ def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
 
         adjusted_arrays = [array[:, :min_columns] for array in tenseor_List]
 
-        concatenated_array = np.concatenate(adjusted_arrays, axis=1)
+        concatenated_array = np.concatenate(adjusted_arrays, axis=0)
+        print(concatenated_array.shape)
 
         min_columns = min(concatenated_array.shape[1], baseline_logits.shape[1])
         adjusted_concatenated_array = concatenated_array[:, :min_columns]
