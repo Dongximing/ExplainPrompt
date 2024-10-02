@@ -457,7 +457,7 @@ def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
         result = model.generate(model_input["input_ids"], temperature=0.1, max_new_tokens=max_new_tokens,
                                 return_dict_in_generate=True, output_scores=True, output_logits=True)
         baseline_output_ids = result[0]
-        # print('baseline_output_ids',len(baseline_output_ids[0][real_length:]))
+        print('baseline_output_ids',baseline_output_ids[0][real_length:])
         a = len(baseline_output_ids[0][real_length:])
 
         for i, batch in enumerate(candidate_input):
