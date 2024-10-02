@@ -87,7 +87,7 @@ def generate_candidate(original_prompt, tokenizer):
     candidate_input = generated_tensor_candidate(baseline_input["input_ids"])
     return candidate_input
 
-def generate_text_with_logit(model, tokenizer, current_input, bl=True,max_new_tokens):
+def generate_text_with_logit(model, tokenizer, current_input,max_new_tokens,bl=False):
     """
     Generate text using the given model and tokenizer.
 
@@ -131,7 +131,7 @@ def generate_text_with_logit(model, tokenizer, current_input, bl=True,max_new_to
         baselines.append(baseline)
     return baselines
 
-def generate_text_with_ig(model, tokenizer, current_input, bl=False,max_new_tokens):
+def generate_text_with_ig(model, tokenizer, current_input, max_new_tokens,bl=False):
     """
     Generate text using the given model and tokenizer.
 
@@ -166,7 +166,7 @@ def generate_text_with_ig(model, tokenizer, current_input, bl=False,max_new_toke
 
     return response,top_indices
 
-def perturbation_attribution_top_k(model, tokenizer, prompt):
+def perturbation_attribution_top_k(model, tokenizer, prompt,max_new_tokens):
     """
     Calculate attribution using perturbation method.
 
@@ -181,7 +181,7 @@ def perturbation_attribution_top_k(model, tokenizer, prompt):
     """
     import time
     start_time = time.time()
-    target = generate_text(model, tokenizer, prompt)
+    target = generate_text(model, tokenizer, prompt,max_new_tokens)
     attribution = FeatureAblation(model)
     llm_attr = LLMAttribution(attribution, tokenizer)
     inp = TextTokenInput(
@@ -195,7 +195,7 @@ def perturbation_attribution_top_k(model, tokenizer, prompt):
     print(f"GPU Memory Usage: {gpu_memory_usage} GB")
     real_attr_res = attr_res.token_attr.cpu().detach().numpy()
     real_attr_res = np.absolute(real_attr_res)
-    baseline = generate_text_with_logit(model, tokenizer, prompt, bl=False)
+    baseline = generate_text_with_logit(model, tokenizer, prompt, bl=False, max_new_tokens=max_new_tokens)
 
     candidate_input = generate_candidate(prompt, tokenizer)
     weight = []
@@ -206,7 +206,7 @@ def perturbation_attribution_top_k(model, tokenizer, prompt):
         # Generate or pass to the model
         with torch.no_grad():
 
-            outputs = generate_text_with_logit(model, tokenizer, current_input, bl=True)
+            outputs = generate_text_with_logit(model, tokenizer, current_input, bl=True, max_new_tokens=max_new_tokens)
             for id, i in enumerate(baseline):
                 bs = i[0]
                 if bs in outputs[id]:
@@ -511,11 +511,11 @@ def calculate_attributes(prompt,model,tokenizer,method,max_new_tokens):
     calculate_method = method
 
     if calculate_method == "perturbation":
-        attribution,target,time,gpu_memory_usage = perturbation_attribution(model, tokenizer, prompt=prompt,max_new_tokens)
+        attribution,target,time,gpu_memory_usage = perturbation_attribution(model, tokenizer, prompt=prompt,max_new_tokens=max_new_tokens)
         words_importance = calculate_word_scores(prompt, attribution)
         return attribution, words_importance, target,time,gpu_memory_usage
     elif calculate_method == "new_gradient":
-        attribution,target,time,gpu_memory_usage = new_gradient_attribution(model, tokenizer, prompt=prompt,max_new_tokens)
+        attribution,target,time,gpu_memory_usage = new_gradient_attribution(model, tokenizer, prompt=prompt,max_new_tokens=max_new_tokens)
         words_importance = calculate_word_scores(prompt, attribution)
         return attribution, words_importance,  target,time,gpu_memory_usage
 
