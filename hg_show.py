@@ -77,13 +77,10 @@ def generated_tensor_candidate(baseline):
     input_tensor = baseline  # Starting with a simple 1D tensor
 
     # Get the number of elements in the tensor
-    n = input_tensor.size(0)
+    result_tensors = [input_tensor[torch.arange(input_tensor.size(0)) != i] for i in range(input_tensor.size(0))]
 
-    # Generate all combinations of indices for n-1 elements
-    combinations = [input_tensor[torch.arange(n) != i] for i in range(n)]
 
-    # Stack the results to form the final 2D tensor
-    result_tensor = torch.stack(combinations)
+    result_tensor = torch.stack(result_tensors)
     print("87",result_tensor)
 
     return result_tensor
