@@ -478,7 +478,7 @@ def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
             candidate_logits = process_logits_candidate(candidate_result, baseline_output_ids[0][real_length:],bb)
             tenseor_List.append(candidate_logits)
 
-        baseline_input = tokenizer.decode(baseline_output_ids[len(model_input['input_ids'][0][:]):],
+        baseline_input = tokenizer.decode(baseline_output_ids,
                                           skip_special_tokens=True)
 
         min_columns = min(array.shape[1] for array in tenseor_List)
