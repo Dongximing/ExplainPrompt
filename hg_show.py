@@ -534,8 +534,7 @@ def calculate_attributes(prompt,model,tokenizer,method,max_new_tokens):
 
 
 
-def run_initial_inference(prompt,method,max_new_tokens):
-    model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
+def run_initial_inference(prompt,model,tokenizer,method,max_new_tokens):
 
     data = []
 
