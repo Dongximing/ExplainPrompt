@@ -413,14 +413,16 @@ def process_logits(result, baseline_output_ids,bb):
     a = 0
     for ind, each_logit in enumerate(result.logits):
         log_probs = torch.nn.functional.log_softmax(each_logit, dim=1)
+        target_probs = torch.exp(target_log_probs)
         baseline_final_socre.append(log_probs[0][baseline_output_ids[ind]])
         if a == bb-1:
             break
         a+=1
     values_list = [x.item() for x in baseline_final_socre]
     values_list = np.array(values_list)
+    exp_array = np.exp(values_list)
     # print(values_list)
-    return values_list.reshape(1, -1)
+    return exp_array.reshape(1, -1)
 
 
 def process_logits_candidate(result, baseline_output_ids,bb):
@@ -436,6 +438,7 @@ def process_logits_candidate(result, baseline_output_ids,bb):
 
     import numpy as np
     baseline_final_socre = np.array(baseline_final_socre)
+    baseline_final_socre = np.exp(baseline_final_socre)
     transposed_array = baseline_final_socre.T
     # print(baseline_final_socre)
     return transposed_array
