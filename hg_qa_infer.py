@@ -492,7 +492,7 @@ def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
 
 
 
-def new_gradient_attribution(model, tokenizer, prompt,max_new_tokens):
+def new_gradient_attribution(model, tokenizer, prompt):
     """
     Calculate attribution using gradient method.
 
@@ -507,7 +507,7 @@ def new_gradient_attribution(model, tokenizer, prompt,max_new_tokens):
     """
     import time
     start_time = time.time()
-    response, top_indices = generate_text_with_ig(model, tokenizer, prompt,max_new_tokens)
+    response, top_indices = generate_text_with_ig(model, tokenizer, prompt,100)
     emb_layer = model.get_submodule("model.embed_tokens")
     ig = LayerIntegratedGradients(model, emb_layer)
     llm_attr = LLMGradientAttribution(ig, tokenizer)
