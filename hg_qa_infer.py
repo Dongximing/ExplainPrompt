@@ -143,7 +143,7 @@ def generate_text_with_ig(model, tokenizer, current_input, max_new_tokens,bl=Fal
     #print(outputs)
     all_top_logits = []
     # print(outputs.scores)
-    print(outputs['sequences'][0][len(inputs["input_ids"][0]):])
+    #print(outputs['sequences'][0][len(inputs["input_ids"][0]):])
     tensor_list = outputs['sequences'][0][len(inputs["input_ids"][0]):].tolist()
     for i,id in enumerate(tensor_list):
         log_probabilities = (outputs.logits)[i]
@@ -232,13 +232,14 @@ def do_comparison(cleaned_baseline, candidate_token):
 #     return mask
 def generated_tensor_candidate(baseline):
     input_tensor = baseline.squeeze(0)
-    print(input_tensor)# Starting with a simple 1D tensor
+    #print(input_tensor)# Starting with a simple 1D tensor
 
     # Get the number of elements in the tensor
     result_tensors = [input_tensor[torch.arange(input_tensor.size(0)) != i] for i in range(input_tensor.size(0))]
 
 
     result_tensor = torch.stack(result_tensors)
+    result_tensor = result_tensor.to(device=0)
 
 
     return result_tensor
