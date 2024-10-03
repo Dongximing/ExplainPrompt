@@ -263,7 +263,7 @@ def similarity_method(model, tokenizer, prompt):
         baseline_input = tokenizer.decode(output_ids[len(model_input['input_ids'][0][:]):], skip_special_tokens=True)
 
     # Load the model
-    sentence_model = SentenceTransformer('all-MiniLM-L6-v2').to("cuda")
+    sentence_model = SentenceTransformer('all-MiniLM-L6-v2').to(device=0)
     gpu_memory_usage = torch.cuda.max_memory_allocated(device=0)
     gpu_memory_usage = gpu_memory_usage/1024/1024/1204
     print(f"GPU Memory Usage: {gpu_memory_usage} GB")
@@ -702,8 +702,9 @@ def main(method):
 if __name__ == "__main__":
     #main("gradient")
     main("new_perturbation")
+    main("new_gradient")
     main("similarity")
     main("discretize")
-    main("new_gradient")
+
 
 
