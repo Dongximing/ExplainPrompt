@@ -156,7 +156,7 @@ def load_and_combine_pkl_files(directory_path):
 
 
 # Usage
-directory_path = '/Users/ximing'
+directory_path = '/Users/ximing/Desktop'
 big_df = load_and_combine_pkl_files(directory_path)
 big_df = big_df
 print(big_df)

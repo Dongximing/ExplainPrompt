@@ -443,7 +443,6 @@ def run_initial_inference(start, end,model,tokenizer,method):
     for ind, example in enumerate(df.select(range(len(df)-1))):
 
             token, word, component, real_output,exec_time,gpu_memory_usage = calculate_attributes(example['sentence'], example['component_range'],model,tokenizer,method)
-            #print("component----------->",component[2])
             if token is not None:
                 data.append(
                     {'prompt': example['sentence'], "real_output": real_output, "token_level": token, "word_level": word,
@@ -492,7 +491,7 @@ def main(method):
     start = 45100
     end = start +200
 
-    model, tokenizer = load_model("meta-llama/Llama-2-13b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
+    model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
    # method = "gradient"
     inference_df = run_initial_inference(start=start,end=end,model=model,tokenizer=tokenizer,method=method)
     inference_df.to_pickle(f"{start}_{end}_{method}_new_inferenced_df.pkl")
