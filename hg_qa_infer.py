@@ -610,7 +610,8 @@ def calculate_attributes(prompt,component_sentences,model,tokenizer,method):
     elif calculate_method == "new_gradient":
         attribution, target, time, gpu_memory_usage = new_gradient_attribution(model, tokenizer, prompt=prompt)
         words_importance = calculate_word_scores(prompt, attribution)
-        return attribution, words_importance, target, time, gpu_memory_usage
+        component_importance = calculate_component_scores(words_importance.get('tokens'), component_sentences)
+        return attribution, words_importance,component_importance, target, time, gpu_memory_usage
     elif calculate_method == "new_perturbation":
         attribution, target, time, gpu_memory_usage = discretize_method(model, tokenizer, prompt=prompt)
         words_importance = calculate_word_scores(prompt, attribution)
@@ -681,11 +682,10 @@ def only_calculate_results(prompt,model, tokenizer):
 
 
 
-def main(method):
+def main(method,model, tokenizer ):
     start = 5103
     end = start +3
 
-    model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
    # method = "gradient"
     inference_df = run_initial_inference(start=start,end=end,model=model,tokenizer=tokenizer,method=method)
     inference_df.to_pickle(f"{start}_{end}_{method}_qa_new_inferenced_df.pkl")
@@ -701,11 +701,13 @@ def main(method):
 
 
 if __name__ == "__main__":
+    model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
+
     #main("gradient")
-    main("new_perturbation")
-    main("new_gradient")
-    main("similarity")
-    main("discretize")
+    main("new_perturbation",model, tokenizer )
+    main("new_gradient",model, tokenizer )
+    main("similarity",model, tokenizer )
+    main("discretize",model, tokenizer )
 
 
 
