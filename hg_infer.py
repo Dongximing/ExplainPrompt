@@ -489,10 +489,10 @@ def run_peturbed_inference(df, model, tokenizer):
     return df
 
 def main(method):
-    start = 55100
+    start = 45100
     end = start +200
 
-    model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
+    model, tokenizer = load_model("meta-llama/Llama-2-13b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
    # method = "gradient"
     inference_df = run_initial_inference(start=start,end=end,model=model,tokenizer=tokenizer,method=method)
     inference_df.to_pickle(f"{start}_{end}_{method}_new_inferenced_df.pkl")
