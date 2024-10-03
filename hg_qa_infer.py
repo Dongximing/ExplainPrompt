@@ -645,8 +645,8 @@ def calculate_attributes(prompt,component_sentences,model,tokenizer,method):
     #     pass
     # else:
     #     pass
-def run_initial_inference(start, end,model,tokenizer,method):
-    df = load_and_preprocess([start,end])
+def run_initial_inference(start, end,model,tokenizer,method,df):
+
     print(len(df))
     data = []
 
@@ -682,12 +682,10 @@ def only_calculate_results(prompt,model, tokenizer):
 
 
 
-def main(method,model, tokenizer ):
-    start = 5103
-    end = start +3
+def main(method,model, tokenizer,df,start,end ):
 
    # method = "gradient"
-    inference_df = run_initial_inference(start=start,end=end,model=model,tokenizer=tokenizer,method=method)
+    inference_df = run_initial_inference(start=start,end=end,model=model,tokenizer=tokenizer,method=method,df=df)
     inference_df.to_pickle(f"{start}_{end}_{method}_qa_new_inferenced_df.pkl")
     print("\ndone the inference")
 
@@ -702,12 +700,15 @@ def main(method,model, tokenizer ):
 
 if __name__ == "__main__":
     model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
+    start = 5103
+    end = start + 3
+    df = load_and_preprocess([start, end])
 
     #main("gradient")
-    main("new_perturbation",model, tokenizer )
-    main("new_gradient",model, tokenizer )
-    main("similarity",model, tokenizer )
-    main("discretize",model, tokenizer )
+    main("new_perturbation",model, tokenizer,df,start, end)
+    main("new_gradient",model, tokenizer,df,start, end )
+    main("similarity",model, tokenizer,df,start, end )
+    main("discretize",model, tokenizer,df,start, end )
 
 
 
