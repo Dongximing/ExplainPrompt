@@ -41,16 +41,12 @@ def generate_text_with_ig(model, tokenizer, current_input):
     Returns:
         - response: The generated text based on the input prompt.
     """
-    if type(current_input) == str:
-        inputs = tokenizer([current_input], return_tensors="pt",add_special_tokens=False).to("cuda")
-    else:
-        inputs = tokenizer.decode(current_input[0])
 
-        inputs = tokenizer([inputs], return_tensors="pt",add_special_tokens=False).to("cuda")
-
-    outputs = model.generate(**inputs, temperature=0.01, output_logits=True, max_new_tokens=100,
+    model_input = tokenizer(current_input, return_tensors="pt", padding=True, truncation=True).to("cuda")
+    outputs = model.generate(model_input["input_ids"], temperature=0.01, output_logits=True, max_new_tokens=100,
                              )
-    response = tokenizer.decode(outputs['sequences'][0][len(inputs["input_ids"][0]):], skip_special_tokens=True)
+    generated_tokens = outputs[len(model_input["input_ids"][0]):]
+    response = tokenizer.decode(generated_tokens, skip_special_tokens=True)
 
 
 
