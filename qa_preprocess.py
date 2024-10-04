@@ -8,7 +8,7 @@ nltk.download('punkt_tab')
 
 
 def preprocess_data(examples):
-    suffix = "Explain the answer like I am five"
+    suffix = "Please respond to the question in a formal and professional tone:"
     ranges = []
     lengths = []
     updated_sentences = []
