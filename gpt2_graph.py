@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 from utils import calculate_word_scores, calculate_component_scores, hg_strip_tokenizer_prefix, postproces_inferenced
 from qa_preprocess import load_and_preprocess
-from peturbation import run_peturbation, do_peturbed_reconstruct
+
 from captum.attr import (
     FeatureAblation,
     LayerIntegratedGradients,
@@ -19,7 +19,7 @@ from captum.attr import (
     TextTokenInput,
 )
 import pickle
-from utils import generate_original_tokens_level_attribute
+
 
 
 def load_model(model_name, bnb_config):
@@ -701,7 +701,7 @@ def main(method,model, tokenizer,df,start,end ):
 if __name__ == "__main__":
     model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
     start = 5303
-    end = start + 2
+    end = start + 200
     df = load_and_preprocess([start, end])
 
     #main("gradient")
