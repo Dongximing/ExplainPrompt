@@ -687,26 +687,26 @@ def main(method,model, tokenizer,df,start,end ):
 
    # method = "gradient"
     inference_df = run_initial_inference(start=start,end=end,model=model,tokenizer=tokenizer,method=method,df=df)
-    inference_df.to_pickle(f"{start}_{end}_{method}_qa_new_inferenced_df.pkl")
+    inference_df.to_pickle(f"{start}_{end}_{method}_llama3_qa_new_inferenced_df.pkl")
     print("\ndone the inference")
 
-    with open(f"{start}_{end}_{method}_qa_new_inferenced_df.pkl", "rb") as f:
+    with open(f"{start}_{end}_{method}_llama3_qa_new_inferenced_df.pkl", "rb") as f:
         postprocess_inferenced_df = pickle.load(f)
     postprocess_inferenced_df = postproces_inferenced(postprocess_inferenced_df)
-    postprocess_inferenced_df.to_pickle(f"{start}_{end}_{method}_qa_new_postprocess_inferenced_df.pkl")
+    postprocess_inferenced_df.to_pickle(f"{start}_{end}_{method}_llama3_qa_new_postprocess_inferenced_df.pkl")
     print("\n done the postprocess")
 
 
 
 
 if __name__ == "__main__":
-    model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
+    model, tokenizer = load_model("meta-llama/Meta-Llama-3-8B", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
     start = 5303
     end = start + 200
     df = load_and_preprocess([start, end])
 
     #main("gradient")
-    #main("new_perturbation",model, tokenizer,df,start, end)
+    main("new_perturbation",model, tokenizer,df,start, end)
     main("new_gradient",model, tokenizer,df,start, end )
     main("similarity",model, tokenizer,df,start, end )
     main("discretize",model, tokenizer,df,start, end )
