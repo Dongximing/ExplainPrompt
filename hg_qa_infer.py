@@ -518,7 +518,7 @@ def new_gradient_attribution(model, tokenizer, prompt):
     inp = TextTokenInput(
         prompt,
         tokenizer,
-        skip_tokens=[0],  # skip the special token for the start of the text <s>
+        skip_tokens=[128000],  # skip the special token for the start of the text <s>
     )
 
     step_list = top_indices
