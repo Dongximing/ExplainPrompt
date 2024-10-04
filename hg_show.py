@@ -77,7 +77,7 @@ def generate_text(model, tokenizer,input,max_new_tokens):
 
 def generated_tensor_candidate(baseline):
     input_tensor = baseline.squeeze(0)
-    print(input_tensor)# Starting with a simple 1D tensor
+    #print(input_tensor)# Starting with a simple 1D tensor
 
     # Get the number of elements in the tensor
     result_tensors = [input_tensor[torch.arange(input_tensor.size(0)) != i] for i in range(input_tensor.size(0))]
@@ -86,7 +86,7 @@ def generated_tensor_candidate(baseline):
     result_tensor = torch.stack(result_tensors)
 
     batches = torch.split(result_tensor, 15)
-    print("87----->",result_tensor)
+    #print("87----->",result_tensor)
 
     return batches
 
@@ -118,7 +118,7 @@ def generate_text_with_logit(model, tokenizer, current_input,max_new_tokens,bl=F
     outputs = model.generate(**inputs, temperature=0.01, output_logits=True, max_new_tokens=max_new_tokens,
                              return_dict_in_generate=True, output_scores=True)
     response = tokenizer.decode(outputs['sequences'][0][len(inputs["input_ids"][0]):], skip_special_tokens=True)
-    print(outputs)
+    #print(outputs)
     all_top_logits = []
     # print(outputs.scores)
     if bl:
@@ -165,7 +165,7 @@ def generate_text_with_ig(model, tokenizer, current_input, max_new_tokens,bl=Fal
     #print(outputs)
     all_top_logits = []
     # print(outputs.scores)
-    print(outputs['sequences'][0][len(inputs["input_ids"][0]):])
+    #print(outputs['sequences'][0][len(inputs["input_ids"][0]):])
     tensor_list = outputs['sequences'][0][len(inputs["input_ids"][0]):].tolist()
     for i,id in enumerate(tensor_list):
         log_probabilities = (outputs.logits)[i]
@@ -201,7 +201,7 @@ def perturbation_attribution_top_k(model, tokenizer, prompt,max_new_tokens):
     attr_res = llm_attr.attribute(inp, target=target)
     gpu_memory_usage = torch.cuda.max_memory_allocated(device=0)
     gpu_memory_usage = gpu_memory_usage/1024/1024/1204
-    print(f"GPU Memory Usage: {gpu_memory_usage} GB")
+    #print(f"GPU Memory Usage: {gpu_memory_usage} GB")
     real_attr_res = attr_res.token_attr.cpu().detach().numpy()
     real_attr_res = np.absolute(real_attr_res)
     baseline = generate_text_with_logit(model, tokenizer, prompt, bl=False, max_new_tokens=max_new_tokens)
@@ -261,7 +261,7 @@ def similarity_method(model, tokenizer, prompt,max_new_tokens):
     with torch.no_grad():
         output_ids = model.generate(model_input["input_ids"], max_new_tokens=max_new_tokens, temperature=0.2)[0]
         baseline_input = tokenizer.decode(output_ids[len(model_input['input_ids'][0][:]):], skip_special_tokens=True)
-        print(baseline_input)
+        #print(baseline_input)
     candidate_input = generate_candidate(prompt, tokenizer)
     tokens = tokenizer.convert_ids_to_tokens(model_input['input_ids'].squeeze(0))
     real_length = len(model_input['input_ids'][0][:])
@@ -269,7 +269,7 @@ def similarity_method(model, tokenizer, prompt,max_new_tokens):
     start_time = time.time()
     model.eval()
     with torch.no_grad():
-        print(candidate_input)
+        #print(candidate_input)
         responses = []
         for i,batch in enumerate(candidate_input):
             output_ids = model.generate(batch, max_new_tokens=max_new_tokens, temperature=0.2)
@@ -307,9 +307,9 @@ def similarity_method(model, tokenizer, prompt,max_new_tokens):
         'value': similarities[i],
         'position': i
     } for i, item in enumerate(tokens)]
-    print(f"\n baseline {final_attributes_dict}")
-    print("prompt",prompt)
-    print(similarities)
+    # print(f"\n baseline {final_attributes_dict}")
+    # print("prompt",prompt)
+    # print(similarities)
     end_time = time.time()
     return {
         "tokens": final_attributes_dict
@@ -355,9 +355,9 @@ def discretize_method(model, tokenizer, prompt,max_new_tokens):
         'value': norm_scores[i],
         'position': i
     } for i, item in enumerate(tokens)]
-    print(f"\n baseline {final_attributes_dict}")
-    print("prompt",prompt)
-    print(norm_scores)
+    # print(f"\n baseline {final_attributes_dict}")
+    # print("prompt",prompt)
+    # print(norm_scores)
     return {
         "tokens": final_attributes_dict
     }, baseline_input, end_time - start_time, gpu_memory_usage
@@ -457,7 +457,7 @@ def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
         result = model.generate(model_input["input_ids"], temperature=0.1, max_new_tokens=max_new_tokens,
                                 return_dict_in_generate=True, output_scores=True, output_logits=True)
         baseline_output_ids = result[0]
-        print('baseline_output_ids',baseline_output_ids[0][real_length:])
+        #print('baseline_output_ids',baseline_output_ids[0][real_length:])
         a = len(baseline_output_ids[0][real_length:])
 
         for i, batch in enumerate(candidate_input):
@@ -507,7 +507,7 @@ def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
         } for i, item in enumerate(tokens)]
         end_time = time.time()
         print('real_output----------------》', baseline_input)
-        print(newer_sum_normalized_array)
+        #print(newer_sum_normalized_array)
         return {
             "tokens": final_attributes_dict
         }, baseline_input, end_time - start_time, 0
@@ -556,7 +556,7 @@ def new_gradient_attribution(model, tokenizer, prompt,max_new_tokens):
         'position': i
     } for i, item in enumerate(labels)]
     gpu_memory_usage = gpu_memory_usage/1024/1024/1204
-    print(f"GPU Memory Usage: {gpu_memory_usage} GB")
+    #print(f"GPU Memory Usage: {gpu_memory_usage} GB")
     end_time = time.time()
     print(f"response---------》{response}")
     return {
@@ -603,9 +603,9 @@ def gradient_attribution(model, tokenizer, prompt):
         'position': i
     } for i, item in enumerate(labels)]
     gpu_memory_usage = gpu_memory_usage/1024/1024/1204
-    print(f"GPU Memory Usage: {gpu_memory_usage} GB")
+    #print(f"GPU Memory Usage: {gpu_memory_usage} GB")
     end_time = time.time()
-    print(f"{final_attributes_dict}")
+    #print(f"{final_attributes_dict}")
     return {
         "tokens": final_attributes_dict
     }, target, end_time - start_time, gpu_memory_usage
