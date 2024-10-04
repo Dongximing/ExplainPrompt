@@ -705,7 +705,7 @@ def main(method,model, tokenizer,df,start,end ):
 if __name__ == "__main__":
     model, tokenizer = load_model("meta-llama/Meta-Llama-3-8B", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
     start = 5303
-    end = start + 200
+    end = start + 100
     df = load_and_preprocess([start, end])
 
     #main("gradient")
