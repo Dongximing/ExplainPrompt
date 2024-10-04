@@ -12,7 +12,9 @@ from utils import calculate_word_scores, calculate_component_scores, hg_strip_to
 from qa_preprocess import load_and_preprocess
 
 from captum.attr import (
+    FeatureAblation,
     LayerIntegratedGradients,
+    LLMAttribution,
     LLMGradientAttribution,
     TextTokenInput,
 )
