@@ -37,7 +37,10 @@ def load_model(model_name, bnb_config):
     max_memory = "10000MB"
 
     model = AutoModelForCausalLM.from_pretrained(
-        model_name,torch_dtype=torch.float16, device_map="auto"
+        model_name,
+        quantization_config=bnb_config,
+        device_map="auto",  # dispatch efficiently the model on the available resources
+        max_memory={i: max_memory for i in range(n_gpus)},
     )
     model.bfloat16()
 
