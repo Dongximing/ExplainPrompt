@@ -47,7 +47,7 @@ def preprocess_data_baseline(examples):
 
 def get_query_instruction_positions(query):
     # Concatenate the sentences
-    instruction = "Explain the answer like I am five"
+    instruction = "Please respond to the question in a formal and professional tone:"
     #query = f"<s>[INST] {query} [/INST]"
     combined_text = query + ' ' + instruction
 
