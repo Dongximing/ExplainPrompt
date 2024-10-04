@@ -518,7 +518,7 @@ def new_gradient_attribution(model, tokenizer, prompt):
     inp = TextTokenInput(
         prompt,
         tokenizer,
-        skip_tokens=[128000],  # skip the special token for the start of the text <s>
+        skip_tokens=[1],  # skip the special token for the start of the text <s>
     )
 
     step_list = top_indices
@@ -690,20 +690,20 @@ def main(method,model, tokenizer,df,start,end ):
 
    # method = "gradient"
     inference_df = run_initial_inference(start=start,end=end,model=model,tokenizer=tokenizer,method=method,df=df)
-    inference_df.to_pickle(f"{start}_{end}_{method}_llama3_qa_new_inferenced_df.pkl")
+    inference_df.to_pickle(f"{start}_{end}_{method}_llama2_qa_new_inferenced_df.pkl")
     print("\ndone the inference")
 
-    with open(f"{start}_{end}_{method}_llama3_qa_new_inferenced_df.pkl", "rb") as f:
+    with open(f"{start}_{end}_{method}_llama2_qa_new_inferenced_df.pkl", "rb") as f:
         postprocess_inferenced_df = pickle.load(f)
     postprocess_inferenced_df = postproces_inferenced(postprocess_inferenced_df)
-    postprocess_inferenced_df.to_pickle(f"{start}_{end}_{method}_llama3_qa_new_postprocess_inferenced_df.pkl")
+    postprocess_inferenced_df.to_pickle(f"{start}_{end}_{method}_llama2_qa_new_postprocess_inferenced_df.pkl")
     print("\n done the postprocess")
 
 
 
 
 if __name__ == "__main__":
-    model, tokenizer = load_model("meta-llama/Meta-Llama-3-8B", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
+    model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
     start = 5303
     end = start + 100
     df = load_and_preprocess([start, end])

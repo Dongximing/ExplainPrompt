@@ -8,7 +8,7 @@ nltk.download('punkt_tab')
 
 
 def preprocess_data(examples):
-    suffix = "Explain the answer like I am five:"
+    suffix = "give a short answer:"
     ranges = []
     lengths = []
     updated_sentences = []
@@ -47,7 +47,7 @@ def preprocess_data_baseline(examples):
 
 def get_query_instruction_positions(query):
     # Concatenate the sentences
-    instruction = "Explain the answer like I am five:"
+    instruction = "give a short answer:"
     #query = f"<s>[INST] {query} [/INST]"
     combined_text = query + ' ' + instruction
 
