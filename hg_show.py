@@ -261,7 +261,7 @@ def similarity_method(model, tokenizer, prompt,max_new_tokens):
     with torch.no_grad():
         output_ids = model.generate(model_input["input_ids"], max_new_tokens=max_new_tokens, temperature=0.2)[0]
         baseline_input = tokenizer.decode(output_ids[len(model_input['input_ids'][0][:]):], skip_special_tokens=True)
-        #print(baseline_input)
+        print("response------->",baseline_input)
     candidate_input = generate_candidate(prompt, tokenizer)
     tokens = tokenizer.convert_ids_to_tokens(model_input['input_ids'].squeeze(0))
     real_length = len(model_input['input_ids'][0][:])
