@@ -158,11 +158,11 @@ def calculate_attributes(prompt,component_sentences,model,tokenizer,method):
     correlation, p_value = spearmanr(relation)
     words_importance = calculate_word_scores(prompt, attribution)
     component_importance = calculate_component_scores(words_importance.get('tokens'), component_sentences)
-    overall_mean = np.mean(correlation)
+    overall_mean = np.max(correlation)
     print("Overall mean of the correlation matrix:", overall_mean)
     mask = np.ones(correlation.shape, dtype=bool)
     np.fill_diagonal(mask, False)
-    non_diagonal_mean = np.mean(correlation[mask])
+    non_diagonal_mean = np.max(correlation[mask])
     print("Mean of non-diagonal elements:", non_diagonal_mean)
 
     return attribution, words_importance, component_importance, target, time, gpu_memory_usage,overall_mean, non_diagonal_mean
