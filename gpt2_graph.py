@@ -165,7 +165,7 @@ def calculate_attributes(prompt,component_sentences,model,tokenizer,method):
     non_diagonal_mean = np.mean(correlation[mask])
     print("Mean of non-diagonal elements:", non_diagonal_mean)
 
-    return attribution, words_importance, component_importance, target, time, gpu_memory_usage,correlation,overall_mean, non_diagonal_mean
+    return attribution, words_importance, component_importance, target, time, gpu_memory_usage,overall_mean, non_diagonal_mean
 
 
 
@@ -235,7 +235,7 @@ def main(method,model, tokenizer,df,start,end ):
 if __name__ == "__main__":
     model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
     start = 5303
-    end = start + 301
+    end = start + 3
     df = load_and_preprocess([start, end])
 
     main("new_gradient",model, tokenizer,df,start, end)
