@@ -235,7 +235,7 @@ def main(method,model, tokenizer,df,start,end ):
 if __name__ == "__main__":
     model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
     start = 5303
-    end = start + 3
+    end = start + 301
     df = load_and_preprocess([start, end])
 
     main("new_gradient",model, tokenizer,df,start, end)
