@@ -106,7 +106,7 @@ def new_gradient_attribution(model, tokenizer, prompt):
     import time
     start_time = time.time()
     response, top_indices ,length= generate_text_with_ig(model, tokenizer, prompt,100)
-    emb_layer = model.get_submodule("model.transformer.wte") # model.embed_tokens for LLama
+    emb_layer = model.get_submodule("transformer.wte") # model.embed_tokens for LLama
     ig = LayerIntegratedGradients(model, emb_layer)
     llm_attr = LLMGradientAttribution(ig, tokenizer)
     inp = TextTokenInput(
