@@ -69,13 +69,26 @@ def generate_text(model, tokenizer,input):
     Returns:
         - response: The generated text based on the input prompt.
     """
+    input = [input]
     model_input = tokenizer(input, return_tensors="pt", padding=True, truncation=True).to("cuda")
     model.eval()
     with torch.no_grad():
-        output_ids = model.generate(model_input["input_ids"], max_new_tokens=2,temperature=0.01)[0]
-        generated_tokens = output_ids[len(model_input["input_ids"][0]):]
-        response = tokenizer.decode(generated_tokens, skip_special_tokens=True)
-    return response
+        output_ids = model.generate(model_input["input_ids"], max_new_tokens=2, temperature=0.01,
+                                    return_dict_in_generate=True, output_scores=True)
+        input_length = 1 if model.config.is_encoder_decoder else model_input.input_ids.shape[1]
+        generated_tokens = output_ids.sequences[:, input_length:]
+        print(generated_tokens)
+        response = tokenizer.decode(generated_tokens[0], skip_special_tokens=True)
+        print(response)
+        transition_scores = model.compute_transition_scores(
+            output_ids.sequences, output_ids.scores, normalize_logits=True
+        )
+        logit_list = []
+
+        for tok, score in zip(generated_tokens[0], transition_scores[0]):
+            logit_list.append(np.exp(score.cpu().numpy()))
+
+    return response,logit_list
 
 
 def process_logits(result, baseline_output_ids,bb):
@@ -155,27 +168,58 @@ def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
         # print(concatenated_array.shape)
         # print(baseline_logits.shape)
 
-    min_columns = min(concatenated_array.shape[1], baseline_logits.shape[1])
-    adjusted_concatenated_array = concatenated_array[:, :min_columns]
-    adjusted_another_array = baseline_logits[:, :min_columns]
-    attribute = adjusted_another_array - adjusted_concatenated_array
-    real_attr_res = np.absolute(attribute)
-    real_attr_res = np.sum(real_attr_res, axis=1)
+        min_columns = min(concatenated_array.shape[1], baseline_logits.shape[1])
+        adjusted_concatenated_array = concatenated_array[:, :min_columns]
+        adjusted_another_array = baseline_logits[:, :min_columns]
+        attribute = adjusted_another_array - adjusted_concatenated_array
+        real_attr_res = np.absolute(attribute)
+        real_attr_res = np.sum(real_attr_res, axis=0)
+        newer_sum_normalized_array = real_attr_res / np.sum(real_attr_res)
+        final_attributes_dict = [{
+            'token': hg_strip_tokenizer_prefix(tokens[i]),
+            'type': 'input',
+            'value': newer_sum_normalized_array[i],
+            'position': i
+        } for i, item in enumerate(tokens)]
+        end_time = time.time()
+        return {
+            "tokens": final_attributes_dict
+        }, baseline_input, end_time - start_time, 0
+
+
+def weighted_normal_ig(model, tokenizer, prompt):
+
+    import time
+    start_time = time.time()
+    target, logit = generate_text(model, tokenizer, prompt)
+    emb_layer = model.get_submodule("model.embed_tokens")
+    ig = LayerIntegratedGradients(model, emb_layer)
+    llm_attr = LLMGradientAttribution(ig, tokenizer)
+    inp = TextTokenInput(
+        prompt,
+        tokenizer,
+        skip_tokens=[1],  # skip the special token for the start of the text <s>
+    )
+    attr_res = llm_attr.attribute(inp, target=target,step_list=[0,1],n_steps=20)
+    gpu_memory_usage = torch.cuda.max_memory_allocated(device=0)
+    real_attr_res = attr_res.token_attr.cpu().detach().numpy()
+    real_attr_res = np.absolute(real_attr_res)
+    real_attr_res = np.sum(real_attr_res, axis=0)
+    labels = attr_res.input_tokens
     newer_sum_normalized_array = real_attr_res / np.sum(real_attr_res)
-    print("newer_sum_normalized_array",newer_sum_normalized_array)
-    print("tokens",tokens)
     final_attributes_dict = [{
-        'token': hg_strip_tokenizer_prefix(tokens[i]),
+        'token': hg_strip_tokenizer_prefix(labels[i]),
         'type': 'input',
         'value': newer_sum_normalized_array[i],
         'position': i
-    } for i, item in enumerate(tokens)]
+    } for i, item in enumerate(labels)]
+    gpu_memory_usage = gpu_memory_usage/1024/1024/1204
+    print(f"GPU Memory Usage: {gpu_memory_usage} GB")
     end_time = time.time()
+    #print(f"{final_attributes_dict}")
     return {
         "tokens": final_attributes_dict
-    }, baseline_input, end_time - start_time, 0
-
-
+    }, target, end_time - start_time, gpu_memory_usage
 
 
 def generate_candidate(original_prompt, tokenizer):
@@ -244,7 +288,7 @@ def perturbation_attribution_top_k(model, tokenizer, prompt):
     """
     import time
     start_time = time.time()
-    target = generate_text(model, tokenizer, prompt)
+    target, logit = generate_text(model, tokenizer, prompt)
     attribution = FeatureAblation(model)
     llm_attr = LLMAttribution(attribution, tokenizer)
     inp = TextTokenInput(
@@ -315,7 +359,7 @@ def perturbation_attribution(model, tokenizer, prompt):
     """
     import time
     start_time = time.time()
-    target = generate_text(model, tokenizer, prompt)
+    target, logit = generate_text(model, tokenizer, prompt)
     attribution = FeatureAblation(model)
     llm_attr = LLMAttribution(attribution, tokenizer)
     inp = TextTokenInput(
@@ -358,7 +402,7 @@ def gradient_attribution(model, tokenizer, prompt):
     """
     import time
     start_time = time.time()
-    target = generate_text(model, tokenizer, prompt)
+    target, logit = generate_text(model, tokenizer, prompt)
     emb_layer = model.get_submodule("model.embed_tokens")
     ig = LayerIntegratedGradients(model, emb_layer)
     llm_attr = LLMGradientAttribution(ig, tokenizer)
@@ -410,7 +454,7 @@ def calculate_attributes(prompt,component_sentences,model,tokenizer,method):
         component_importance = calculate_component_scores(words_importance.get('tokens'), component_sentences)
         return attribution, words_importance, component_importance, target,time,gpu_memory_usage
     elif calculate_method == "new_perturbation":
-        attribution,target,time,gpu_memory_usage = new_logit_parallel(model, tokenizer, prompt=prompt,max_new_tokens=2)
+        attribution,target,time,gpu_memory_usage = new_logit_parallel(model, tokenizer, prompt=prompt,max_new_tokens=max_new_tokens)
         words_importance = calculate_word_scores(prompt, attribution)
         component_importance = calculate_component_scores(words_importance.get('tokens'), component_sentences)
         return attribution, words_importance, component_importance, target,time,gpu_memory_usage
@@ -465,7 +509,7 @@ def run_initial_inference(start, end,model,tokenizer,method):
 
 
 def only_calculate_results(prompt,model, tokenizer):
-    response = generate_text(model, tokenizer,prompt)
+    response,logit = generate_text(model, tokenizer,prompt)
     return response
 
 
@@ -523,7 +567,7 @@ def main(method):
     perturbed_inferenced_df.to_pickle(f"{start}_{end}_{method}_new_perturbed_inferenced_df.pkl")
     print("\n done the reconstructed inference data")
 if __name__ == "__main__":
-    main("new_perturbation")
+    main("gradient")
     #main("perturbation")
     #main("top_k_perturbation")
 

@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import textstat
 
-input_file = "hg3/5303_5403_discretize_llama3_qa_new_postprocess_inferenced_df.pkl"
+input_file = "hg_short/5303_5403_new_gradient_llama2_qa_new_postprocess_inferenced_df.pkl"
 encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
 
 def process_row(row):
@@ -48,12 +48,12 @@ def readable(example):
 
 with open(input_file, "rb") as f:
     reconstructed_df = pickle.load(f)
-    # columns_to_remove = ['query_max_normalized_value',
-    #                      'query_max_token', 'instruction_max_normalized_value',
-    #                      'instruction_max_token']
-    # reconstructed_df = reconstructed_df.drop(columns=columns_to_remove, axis=1)
+    columns_to_remove = ['query_max_normalized_value',
+                         'query_max_token', 'instruction_max_normalized_value',
+                         'instruction_max_token']
+    reconstructed_df = reconstructed_df.drop(columns=columns_to_remove, axis=1)
     reconstructed_df['real_output_length'] = reconstructed_df.apply(lambda row: add_output(row), axis=1)
-    reconstructed_df['real_output_readable_score'] = reconstructed_df.apply(lambda row: readable(row), axis=1)
+    reconstructed_df['real_output_readable_score'] = reconstructed_df.apply(lambda row: add_output(row), axis=1)
     new_columns = reconstructed_df.apply(process_row, axis=1)
     df = pd.concat([reconstructed_df, new_columns], axis=1)
 
@@ -74,7 +74,7 @@ with open("hg1/5303_5503_qa_hg_baseline_inferenced_df.pkl", "rb") as f:
 
 # 执行相减操作
 df1['baseline_real_output_readable_score'] = filtered_df2['real_output_length']
-df1['difference'] = (df1['real_output_length'] - df1['baseline_real_output_readable_score'])
+df1['difference'] = (df1['baseline_real_output_readable_score']-df1['real_output_length'])
 
 df1.to_pickle(input_file)
 #1103_1203_logits_new_prompt_qa_postprocess_inferenced_df.pkl

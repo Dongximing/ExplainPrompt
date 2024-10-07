@@ -1,28 +1,16 @@
-import pandas as pd
-import os
+import numpy as np
+from scipy.stats import spearmanr
 
+# Create a 2D array with sample data
+# Here, we assume each row is a variable and each column is an observation
+data = np.array([
+    [1, 2, 3, 4, 5],     # Variable 1
+    [2, 3, 2, 1, 0],     # Variable 2
+    [3.5, 2.5, 0.5, 1.5, 3.0]  # Variable 3
+]).T  # Transpose to make columns into variables
 
-def load_and_combine_pkl_files(directory_path):
-    # List to hold all the dataframes
-    dataframes = []
+# Calculate the Spearman correlation coefficient and p-value
+correlation, p_value = spearmanr(data)
 
-    # Loop through all the files in the specified directory
-    for filename in os.listdir(directory_path):
-        if filename.endswith('.pkl'):
-            # Construct full file path
-            file_path = os.path.join(directory_path, filename)
-            # Load the dataframe from a pkl file
-            df = pd.read_pickle(file_path)
-            # Append the dataframe to the list
-            dataframes.append(df)
-
-    # Concatenate all dataframes into one big dataframe
-    big_df = pd.concat(dataframes, ignore_index=True)
-
-    return big_df
-
-
-# Usage
-directory_path = '/Users/ximing/Desktop/Explainprompt/similarity/'
-big_df = load_and_combine_pkl_files(directory_path)
-print(big_df)
+print("Spearman correlation coefficient matrix:\n", correlation)
+print("P-value matrix:\n", p_value)

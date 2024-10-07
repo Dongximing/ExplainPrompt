@@ -72,6 +72,7 @@ def generate_text_with_ig(model, tokenizer, current_input, max_new_tokens,bl=Fal
     outputs = model.generate(**inputs, temperature=0.01, output_logits=True, max_new_tokens=100,
                              return_dict_in_generate=True, output_scores=True)
     response = tokenizer.decode(outputs['sequences'][0][len(inputs["input_ids"][0]):], skip_special_tokens=True)
+    output_len = len(outputs['sequences'][0][len(inputs["input_ids"][0]):])
 
     all_top_logits = []
 
@@ -82,7 +83,7 @@ def generate_text_with_ig(model, tokenizer, current_input, max_new_tokens,bl=Fal
         all_top_logits.append((top_logits))
     top_indices = sorted(range(len(all_top_logits)), key=lambda x: all_top_logits[x], reverse=True)[:5]
 
-    return response,top_indices
+    return response,top_indices,output_len
 
 
 
@@ -104,7 +105,7 @@ def new_gradient_attribution(model, tokenizer, prompt):
     """
     import time
     start_time = time.time()
-    response, top_indices = generate_text_with_ig(model, tokenizer, prompt,100)
+    response, top_indices ,length= generate_text_with_ig(model, tokenizer, prompt,100)
     emb_layer = model.get_submodule("model.embed_tokens")
     ig = LayerIntegratedGradients(model, emb_layer)
     llm_attr = LLMGradientAttribution(ig, tokenizer)
@@ -114,11 +115,13 @@ def new_gradient_attribution(model, tokenizer, prompt):
         skip_tokens=[1],  # skip the special token for the start of the text <s>
     )
 
-    step_list = [0,1,2,3,4]
-    #print(step_list)
+
+    step_list = list(range(length))
+
     attr_res = llm_attr.attribute(inp=inp,target=response,step_list=step_list, n_steps=10)
     gpu_memory_usage = torch.cuda.max_memory_allocated(device=0)
     real_attr_res = attr_res.token_attr.cpu().detach().numpy()
+    print("real_attr_res---------->",real_attr_res.shape)
     real_attr_res = np.absolute(real_attr_res)
     real_attr_res = np.sum(real_attr_res, axis=0)
     labels = attr_res.input_tokens
@@ -207,12 +210,12 @@ def main(method,model, tokenizer,df,start,end ):
 
 
 if __name__ == "__main__":
-    model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
+    model, tokenizer = load_model("openai-community/gpt2", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
     start = 5303
     end = start + 200
     df = load_and_preprocess([start, end])
 
-    main("new_gradient",model, tokenizer,df,start, end )
+    main("new_gradient",model, tokenizer,df,start, end)
 
 
 

@@ -473,13 +473,13 @@ def run_peturbed_inference(df, results_path, column_names=None):
 def main(method,start,end):
 
     inference_df = run_initial_inference(start=start, end=end, method=method)
-    inference_df.to_pickle(f"{start}_{end}_{method}_flesh_new_prompt_qa_inferenced_df.pkl")
+    inference_df.to_pickle(f"{start}_{end}_{method}_short_new_prompt_qa_inferenced_df.pkl")
     print("\ndone the inference")
 
-    with open(f"{start}_{end}_{method}_flesh_new_prompt_qa_inferenced_df.pkl", "rb") as f:
+    with open(f"{start}_{end}_{method}_short_new_prompt_qa_inferenced_df.pkl", "rb") as f:
         postprocess_inferenced_df = pickle.load(f)
     postprocess_inferenced_df = postproces_inferenced(postprocess_inferenced_df)
-    postprocess_inferenced_df.to_pickle(f"{start}_{end}_{method}_flesh_new_prompt_qa_postprocess_inferenced_df.pkl")
+    postprocess_inferenced_df.to_pickle(f"{start}_{end}_{method}_short_new_prompt_qa_postprocess_inferenced_df.pkl")
     print("\n done the postprocess")
 
 
@@ -490,11 +490,10 @@ def main(method,start,end):
 if __name__ == "__main__":
     start = 1303
     end = start + 100
-    main("similarity",1303, 1403)
-    main("similarity", 1003, 1103)
-    main("similarity", 1403, 1503)
-    # main("discretize")
-    # main("logits")
+    main("similarity",start, end)
+    main("discretize", start, end)
+    main("logits", start, end)
+
 
 
 
