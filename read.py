@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import textstat
 
-input_file = "hg_short/5303_5403_new_gradient_llama2_qa_new_postprocess_inferenced_df.pkl"
+input_file = "1303_1403_discretize_short_new_prompt_qa_postprocess_inferenced_df.pkl"
 encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
 
 def process_row(row):
@@ -48,10 +48,10 @@ def readable(example):
 
 with open(input_file, "rb") as f:
     reconstructed_df = pickle.load(f)
-    columns_to_remove = ['query_max_normalized_value',
-                         'query_max_token', 'instruction_max_normalized_value',
-                         'instruction_max_token']
-    reconstructed_df = reconstructed_df.drop(columns=columns_to_remove, axis=1)
+    # columns_to_remove = ['query_max_normalized_value',
+    #                      'query_max_token', 'instruction_max_normalized_value',
+    #                      'instruction_max_token']
+    # reconstructed_df = reconstructed_df.drop(columns=columns_to_remove, axis=1)
     reconstructed_df['real_output_length'] = reconstructed_df.apply(lambda row: add_output(row), axis=1)
     reconstructed_df['real_output_readable_score'] = reconstructed_df.apply(lambda row: add_output(row), axis=1)
     new_columns = reconstructed_df.apply(process_row, axis=1)
@@ -63,9 +63,9 @@ with open(input_file, "rb") as f:
     df1 = pickle.load(f)
 
 
-with open("hg1/5303_5503_qa_hg_baseline_inferenced_df.pkl", "rb") as f:
+with open("/Users/ximing/Desktop/Explainprompt/openai_result/1303_1403_baseline_qa_inferenced_df.pkl", "rb") as f:
     df2 = pickle.load(f)
-    df2 = df2[:99]
+
     filtered_df2 = df2[df2['prompt'].isin(df1['query'])]
     filtered_df2['real_output_length'] = filtered_df2.apply(lambda row: add_output(row), axis=1)
 

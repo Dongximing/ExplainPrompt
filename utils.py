@@ -168,7 +168,7 @@ def postproces_inferenced(df):
         max_value = -1
         max_token = None
         for item in items:
-            normalized_value = item['value'] / total_value
+            normalized_value = item['value']
             item['normalized_value'] = normalized_value  # 可以保存归一化值以便检查
             if normalized_value > max_value:
                 max_value = normalized_value

@@ -472,9 +472,6 @@ def run_peturbed_inference(df, results_path, column_names=None):
 
 def main(method,start,end):
 
-    inference_df = run_initial_inference(start=start, end=end, method=method)
-    inference_df.to_pickle(f"{start}_{end}_{method}_short_new_prompt_qa_inferenced_df.pkl")
-    print("\ndone the inference")
 
     with open(f"{start}_{end}_{method}_short_new_prompt_qa_inferenced_df.pkl", "rb") as f:
         postprocess_inferenced_df = pickle.load(f)
@@ -490,9 +487,7 @@ def main(method,start,end):
 if __name__ == "__main__":
     start = 1303
     end = start + 100
-    #main("similarity",start, end)
-    #main("discretize", start, end)
-    main("logits", start, end)
+    main("discretize",start, end)
 
 
 

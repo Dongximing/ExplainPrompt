@@ -2,7 +2,7 @@ import bitsandbytes as bnb
 import torch
 from sentence_transformers import SentenceTransformer, util
 import numpy as np
-
+from scipy.stats import spearmanr
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 import random
 import sys
@@ -69,7 +69,7 @@ def generate_text_with_ig(model, tokenizer, current_input, max_new_tokens,bl=Fal
 
         inputs = tokenizer([inputs], return_tensors="pt",add_special_tokens=False).to("cuda")
 
-    outputs = model.generate(**inputs, temperature=0.01, output_logits=True, max_new_tokens=100,
+    outputs = model.generate(**inputs, temperature=0.01, output_logits=True, max_new_tokens=30,
                              return_dict_in_generate=True, output_scores=True)
     response = tokenizer.decode(outputs['sequences'][0][len(inputs["input_ids"][0]):], skip_special_tokens=True)
     output_len = len(outputs['sequences'][0][len(inputs["input_ids"][0]):])
@@ -106,7 +106,7 @@ def new_gradient_attribution(model, tokenizer, prompt):
     import time
     start_time = time.time()
     response, top_indices ,length= generate_text_with_ig(model, tokenizer, prompt,100)
-    emb_layer = model.get_submodule("transformer.wte") # model.embed_tokens for LLama
+    emb_layer = model.get_submodule("model.embed_tokens") # model.embed_tokens for LLama
     ig = LayerIntegratedGradients(model, emb_layer)
     llm_attr = LLMGradientAttribution(ig, tokenizer)
     inp = TextTokenInput(
@@ -138,7 +138,7 @@ def new_gradient_attribution(model, tokenizer, prompt):
     print(f"response---------》{response}")
     return {
         "tokens": final_attributes_dict
-    }, response, end_time - start_time, gpu_memory_usage
+    }, response, end_time - start_time, gpu_memory_usage,attr_res.token_attr.cpu().detach().numpy().T
 
 
 
@@ -154,10 +154,18 @@ def calculate_attributes(prompt,component_sentences,model,tokenizer,method):
     - attribution: The attributions calculated using the given calculate_method.
     """
 
-    attribution, target, time, gpu_memory_usage = new_gradient_attribution(model, tokenizer, prompt=prompt)
+    attribution, target, time, gpu_memory_usage,relation = new_gradient_attribution(model, tokenizer, prompt=prompt)
+    correlation, p_value = spearmanr(relation)
     words_importance = calculate_word_scores(prompt, attribution)
     component_importance = calculate_component_scores(words_importance.get('tokens'), component_sentences)
-    return attribution, words_importance, component_importance, target, time, gpu_memory_usage
+    overall_mean = np.mean(correlation)
+    print("Overall mean of the correlation matrix:", overall_mean)
+    mask = np.ones(correlation.shape, dtype=bool)
+    np.fill_diagonal(mask, False)
+    non_diagonal_mean = np.mean(correlation[mask])
+    print("Mean of non-diagonal elements:", non_diagonal_mean)
+
+    return attribution, words_importance, component_importance, target, time, gpu_memory_usage,correlation,overall_mean, non_diagonal_mean
 
 
 
@@ -165,10 +173,13 @@ def run_initial_inference(start, end,model,tokenizer,method,df):
 
     print(len(df))
     data = []
+    overall_means = []
+    non_diagonal_means = []
+
 
     for ind, example in enumerate(df.select(range(len(df)-1))):
 
-            token, word, component, real_output,exec_time,gpu_memory_usage = calculate_attributes(example['prefix_query'], example['component_range'],model,tokenizer,method)
+            token, word, component, real_output,exec_time,gpu_memory_usage,overall_mean, non_diagonal_mean = calculate_attributes(example['prefix_query'], example['component_range'],model,tokenizer,method)
 
             if token is not None:
                 data.append(
@@ -183,8 +194,20 @@ def run_initial_inference(start, end,model,tokenizer,method,df):
                      "gpu_memory_usage":gpu_memory_usage
                      }
                 )
+                overall_means.append(overall_mean)
+                non_diagonal_means.append(non_diagonal_mean)
             else:
                 print(f"hg_infer.py:170  No output for prompt: {example['sentence']}")
+    with open('my_list1.txt', 'w') as file:
+        # Convert list to a string that looks like a list and write to the file
+        file.write(repr(overall_means))
+    with open('my_list2.txt', 'w') as file:
+        # Convert list to a string that looks like a list and write to the file
+        file.write(repr(non_diagonal_means))
+
+
+    print("List has been saved to 'my_list.txt'")
+
     result = pd.DataFrame(data)
 
     return result
@@ -197,22 +220,22 @@ def main(method,model, tokenizer,df,start,end ):
 
    # method = "gradient"
     inference_df = run_initial_inference(start=start,end=end,model=model,tokenizer=tokenizer,method=method,df=df)
-    inference_df.to_pickle(f"{start}_{end}_{method}_qa_new_inferenced_df.pkl")
+    inference_df.to_pickle(f"{start}_{end}_{method}_l30_qa_new_inferenced_df.pkl")
     print("\ndone the inference")
 
-    with open(f"{start}_{end}_{method}_qa_new_inferenced_df.pkl", "rb") as f:
+    with open(f"{start}_{end}_{method}_l30_qa_new_inferenced_df.pkl", "rb") as f:
         postprocess_inferenced_df = pickle.load(f)
     postprocess_inferenced_df = postproces_inferenced(postprocess_inferenced_df)
-    postprocess_inferenced_df.to_pickle(f"{start}_{end}_{method}_qa_new_postprocess_inferenced_df.pkl")
+    postprocess_inferenced_df.to_pickle(f"{start}_{end}_{method}_l30_qa_new_postprocess_inferenced_df.pkl")
     print("\n done the postprocess")
 
 
 
 
 if __name__ == "__main__":
-    model, tokenizer = load_model("openai-community/gpt2", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
+    model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
     start = 5303
-    end = start + 200
+    end = start + 301
     df = load_and_preprocess([start, end])
 
     main("new_gradient",model, tokenizer,df,start, end)
