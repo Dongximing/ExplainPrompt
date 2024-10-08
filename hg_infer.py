@@ -533,7 +533,7 @@ def run_peturbed_inference(df, model, tokenizer):
 
 def main(method):
     start = 45100
-    end = start +200
+    end = start +3
 
     model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
    # method = "gradient"
@@ -541,34 +541,36 @@ def main(method):
     inference_df.to_pickle(f"{start}_{end}_{method}_new_inferenced_df.pkl")
     print("\ndone the inference")
 
-    with open(f"{start}_{end}_{method}_new_inferenced_df.pkl", "rb") as f:
-        postprocess_inferenced_df = pickle.load(f)
-    postprocess_inferenced_df = postproces_inferenced(postprocess_inferenced_df)
-    postprocess_inferenced_df.to_pickle(f"{start}_{end}_{method}_new_postprocess_inferenced_df.pkl")
-    print("\n done the postprocess")
-
-
-    with open(f"{start}_{end}_{method}_new_postprocess_inferenced_df.pkl", "rb") as f:
-        postprocess_inferenced_df = pickle.load(f)
-
-    perturbed_df = run_peturbation(postprocess_inferenced_df.copy())
-    perturbed_df.to_pickle(f"{start}_{end}_{method}_new_perturbed_df.pkl")
-    print("\n done the perturbed")
-
-    with open(f"{start}_{end}_{method}_new_perturbed_df.pkl", "rb") as f:
-        reconstructed_df = pickle.load(f)
-    reconstructed_df = do_peturbed_reconstruct(reconstructed_df.copy(), None)
-    reconstructed_df.to_pickle(f"{start}_{end}_{method}_new_reconstructed_df.pkl")
-    print("\n done the reconstructed")
-
-    with open(f"{start}_{end}_{method}_new_reconstructed_df.pkl", "rb") as f:
-        reconstructed_df = pickle.load(f)
-    perturbed_inferenced_df = run_peturbed_inference(reconstructed_df, model, tokenizer)
-    perturbed_inferenced_df.to_pickle(f"{start}_{end}_{method}_new_perturbed_inferenced_df.pkl")
-    print("\n done the reconstructed inference data")
+    # with open(f"{start}_{end}_{method}_new_inferenced_df.pkl", "rb") as f:
+    #     postprocess_inferenced_df = pickle.load(f)
+    # postprocess_inferenced_df = postproces_inferenced(postprocess_inferenced_df)
+    # postprocess_inferenced_df.to_pickle(f"{start}_{end}_{method}_new_postprocess_inferenced_df.pkl")
+    # print("\n done the postprocess")
+    #
+    #
+    # with open(f"{start}_{end}_{method}_new_postprocess_inferenced_df.pkl", "rb") as f:
+    #     postprocess_inferenced_df = pickle.load(f)
+    #
+    # perturbed_df = run_peturbation(postprocess_inferenced_df.copy())
+    # perturbed_df.to_pickle(f"{start}_{end}_{method}_new_perturbed_df.pkl")
+    # print("\n done the perturbed")
+    #
+    # with open(f"{start}_{end}_{method}_new_perturbed_df.pkl", "rb") as f:
+    #     reconstructed_df = pickle.load(f)
+    # reconstructed_df = do_peturbed_reconstruct(reconstructed_df.copy(), None)
+    # reconstructed_df.to_pickle(f"{start}_{end}_{method}_new_reconstructed_df.pkl")
+    # print("\n done the reconstructed")
+    #
+    # with open(f"{start}_{end}_{method}_new_reconstructed_df.pkl", "rb") as f:
+    #     reconstructed_df = pickle.load(f)
+    # perturbed_inferenced_df = run_peturbed_inference(reconstructed_df, model, tokenizer)
+    # perturbed_inferenced_df.to_pickle(f"{start}_{end}_{method}_new_perturbed_inferenced_df.pkl")
+    # print("\n done the reconstructed inference data")
 if __name__ == "__main__":
     main("gradient")
-    #main("perturbation")
+    main("new_perturbation")
+
+
     #main("top_k_perturbation")
 
 

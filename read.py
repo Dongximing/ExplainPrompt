@@ -8,6 +8,18 @@ import textstat
 input_file = "1303_1403_similarity_short_new_prompt_qa_postprocess_inferenced_df.pkl"
 encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
 
+def calculate_ranking(row, target_token):
+    # 提取 tokens 列表
+    tokens = row['tokens']
+    # 排序 tokens，基于 value
+    tokens_sorted = sorted(tokens, key=lambda x: x['value'], reverse=True)
+    # 创建排名
+    token_ranking = {token['token']: rank+1 for rank, token in enumerate(tokens_sorted)}
+    # 返回目标 token 的排名
+    return token_ranking.get(target_token, None)  # 如果 token 不存在，返回 None
+
+# 应用函数到每行，将 'instruction_max_token' 作为参数传递
+
 def process_row(row):
     # 解析数据
     items = row['query_tokens']
@@ -48,6 +60,10 @@ def readable(example):
 
 with open(input_file, "rb") as f:
     reconstructed_df = pickle.load(f)
+    # columns_to_remove = ['query_max_normalized_value',
+    #                      'query_max_token', 'instruction_max_normalized_value',
+    #                      'instruction_max_token']
+    # reconstructed_df = reconstructed_df.drop(columns=columns_to_remove, axis=1)
     columns_to_remove = ['query_max_normalized_value',
                          'query_max_token', 'instruction_max_normalized_value',
                          'instruction_max_token']
@@ -55,6 +71,8 @@ with open(input_file, "rb") as f:
     reconstructed_df['real_output_length'] = reconstructed_df.apply(lambda row: add_output(row), axis=1)
     reconstructed_df['real_output_readable_score'] = reconstructed_df.apply(lambda row: add_output(row), axis=1)
     new_columns = reconstructed_df.apply(process_row, axis=1)
+    reconstructed_df['ranking'] = reconstructed_df.apply(lambda x: calculate_ranking(x['word_level'], x['max_token']), axis=1)
+
     df = pd.concat([reconstructed_df, new_columns], axis=1)
 
 df.to_pickle(input_file)
@@ -74,7 +92,7 @@ with open("/Users/ximing/Desktop/Explainprompt/openai_result/1303_1403_baseline_
 
 # 执行相减操作
 df1['baseline_real_output_readable_score'] = filtered_df2['real_output_length']
-df1['difference'] = (df1['baseline_real_output_readable_score']-df1['real_output_length'])
+df1['difference'] = abs(df1['baseline_real_output_readable_score']-df1['real_output_length'])/df1['real_output_length']
 
 df1.to_pickle(input_file)
 #1103_1203_logits_new_prompt_qa_postprocess_inferenced_df.pkl
@@ -82,23 +100,23 @@ with open(input_file, "rb") as f:
     reconstructed_df = pickle.load(f)
     # spearman_corr = reconstructed_df['instruction_weight'].corr(reconstructed_df['difference'], method='spearman')
     # print("Spearman Correlation coefficient:", spearman_corr)
-
+    reconstructed_df = reconstructed_df[reconstructed_df['difference'] > 1]
     print(reconstructed_df.columns)
-    #reconstructed_df = reconstructed_df[reconstructed_df['instruction_max_token'].notna()]
+    reconstructed_df = reconstructed_df[reconstructed_df['instruction_max_token'].notna()]
 
     # 计算两列之间的皮尔逊相关系数
-    spearman_corr = reconstructed_df['query_max_normalized_value'].corr(reconstructed_df['difference'],method='pearson'
+    spearman_corr = reconstructed_df['ranking'].corr(reconstructed_df['difference'],method='pearson'
                                                                         )
 
     print("Pearson correlation coefficient:", spearman_corr)
 
-    pearson = reconstructed_df['instruction_max_normalized_value'].corr(reconstructed_df['difference'], method='pearson')
+    pearson = reconstructed_df['ranking'].corr(reconstructed_df['difference'], method='pearson')
     print("pearson Correlation coefficient: instruction_max_normalized_value", pearson)
 
 
-    spearman_corr = reconstructed_df['query_max_normalized_value'].corr(reconstructed_df['difference'], method='spearman')
+    spearman_corr = reconstructed_df['ranking'].corr(reconstructed_df['difference'], method='spearman')
     print("Spearman Correlation coefficient: query_max_normalized_value", spearman_corr)
-    pearson = reconstructed_df['instruction_max_normalized_value'].corr(reconstructed_df['difference'], method='spearman')
+    pearson = reconstructed_df['ranking'].corr(reconstructed_df['difference'], method='spearman')
     print("Spearman Correlation coefficient:instruction_max_normalized_value ", pearson)
 
     # print(reconstructed_df.columns)
@@ -161,3 +179,4 @@ with open(input_file, "rb") as f:
 # big_df = load_and_combine_pkl_files(directory_path)
 # big_df = big_df
 # print(big_df)
+

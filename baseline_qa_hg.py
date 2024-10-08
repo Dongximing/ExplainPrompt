@@ -47,6 +47,7 @@ def generate_text_with_ig(model, tokenizer, current_input):
                              )
     generated_tokens = outputs[len(model_input["input_ids"][0]):]
     response = tokenizer.decode(generated_tokens, skip_special_tokens=True)
+    print(response)
 
 
 
@@ -82,7 +83,7 @@ def main(model, tokenizer,df,start,end ):
 if __name__ == "__main__":
     model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
     start = 5303
-    end = start + 200
+    end = start + 100
     df = load_and_preprocess([start, end])
 
     #main("gradient")
