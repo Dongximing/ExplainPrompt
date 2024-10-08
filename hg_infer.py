@@ -27,10 +27,10 @@ def generated_tensor_candidate(baseline):
 
     result_tensor = torch.stack(result_tensors)
 
-    batches = torch.split(result_tensor, 15)
-    print("87----->",result_tensor)
+    # batches = torch.split(result_tensor, 15)
+    # print("87----->",result_tensor)
 
-    return batches
+    return result_tensor
 
 def load_model(model_name, bnb320ig):
     """
