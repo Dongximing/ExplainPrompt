@@ -43,7 +43,7 @@ def generate_text_with_ig(model, tokenizer, current_input):
     """
 
     model_input = tokenizer(current_input, return_tensors="pt", padding=True, truncation=True).to("cuda")
-    outputs = model.generate(model_input["input_ids"], temperature=0.1,  max_new_tokens=256,
+    outputs = model.generate(model_input["input_ids"], temperature=0.1,  max_new_tokens=1024,
                              )
 
     generated_tokens = outputs[0][len(model_input["input_ids"]):]
@@ -77,7 +77,7 @@ def main(model, tokenizer,df,start,end ):
 
    # method = "gradient"
     inference_df = run_initial_inference(model=model,tokenizer=tokenizer,df=df)
-    inference_df.to_pickle(f"{start}_{end}_qa_hg_baseline_inferenced_df.pkl")
+    inference_df.to_pickle(f"{start}_{end}_1024_qa_hg_baseline_inferenced_df.pkl")
     print("\ndone the inference")
 
 

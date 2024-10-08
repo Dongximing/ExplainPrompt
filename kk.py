@@ -485,9 +485,11 @@ def main(method,start,end):
 
 
 if __name__ == "__main__":
-    start = 1303
+    start = 1403
     end = start + 100
-    main("discretize",start, end)
+    main("similarity",start, end)
+    main("discretize", start, end)
+    main("logits", start, end)
 
 
 

@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import textstat
 
-input_file = "1303_1403_similarity_short_new_prompt_qa_postprocess_inferenced_df.pkl"
+input_file = "hg_short/5303_5403_discretize_llama2_qa_new_postprocess_inferenced_df.pkl"
 encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
 
 def calculate_ranking(row, target_token):
@@ -81,7 +81,7 @@ with open(input_file, "rb") as f:
     df1 = pickle.load(f)
 
 
-with open("/Users/ximing/Desktop/Explainprompt/openai_result/1303_1403_baseline_qa_inferenced_df.pkl", "rb") as f:
+with open("5303_5403_qa_hg_baseline_inferenced_df.pkl", "rb") as f:
     df2 = pickle.load(f)
 
     filtered_df2 = df2[df2['prompt'].isin(df1['query'])]
@@ -93,7 +93,7 @@ with open("/Users/ximing/Desktop/Explainprompt/openai_result/1303_1403_baseline_
 # 执行相减操作
 df1['baseline_real_output_readable_score'] = filtered_df2['real_output_length']
 df1['difference'] = abs(df1['baseline_real_output_readable_score']-df1['real_output_length'])/df1['real_output_length']
-
+df1['difference2'] = abs(df1['baseline_real_output_readable_score']-df1['real_output_length'])
 df1.to_pickle(input_file)
 #1103_1203_logits_new_prompt_qa_postprocess_inferenced_df.pkl
 with open(input_file, "rb") as f:
@@ -105,19 +105,82 @@ with open(input_file, "rb") as f:
     reconstructed_df = reconstructed_df[reconstructed_df['instruction_max_token'].notna()]
 
     # 计算两列之间的皮尔逊相关系数
-    spearman_corr = reconstructed_df['ranking'].corr(reconstructed_df['difference'],method='pearson'
+    spearman_corr = reconstructed_df['instruction_weight'].corr(reconstructed_df['difference'],method='pearson')
+    print("Pearson correlation coefficient:", spearman_corr)
+
+
+    spearman_corr = reconstructed_df['instruction_max_normalized_value'].corr(reconstructed_df['difference'],method='pearson'
                                                                         )
 
     print("Pearson correlation coefficient:", spearman_corr)
 
+
+
     pearson = reconstructed_df['ranking'].corr(reconstructed_df['difference'], method='pearson')
-    print("pearson Correlation coefficient: instruction_max_normalized_value", pearson)
+    print("Spearman Correlation coefficient:instruction_max_normalized_value ", pearson)
 
 
-    spearman_corr = reconstructed_df['ranking'].corr(reconstructed_df['difference'], method='spearman')
-    print("Spearman Correlation coefficient: query_max_normalized_value", spearman_corr)
+
+
+
+    reconstructed_df = reconstructed_df[reconstructed_df['instruction_max_token'].notna()]
+
+    # 计算两列之间的皮尔逊相关系数
+    spearman_corr = reconstructed_df['instruction_weight'].corr(reconstructed_df['difference2'],method='pearson')
+    print("Pearson correlation coefficient:", spearman_corr)
+
+
+    spearman_corr = reconstructed_df['instruction_max_normalized_value'].corr(reconstructed_df['difference2'],method='pearson'
+                                                                        )
+
+    print("Pearson correlation coefficient:", spearman_corr)
+
+
+
+    pearson = reconstructed_df['ranking'].corr(reconstructed_df['difference2'], method='pearson')
+    print("Spearman Correlation coefficient:instruction_max_normalized_value ", pearson)
+
+
+
+
+
+    print("--------------------------------")
+    spearman_corr = reconstructed_df['instruction_weight'].corr(reconstructed_df['difference'],method='spearman')
+    print("Pearson correlation coefficient:", spearman_corr)
+
+
+    spearman_corr = reconstructed_df['instruction_max_normalized_value'].corr(reconstructed_df['difference'],method='spearman'
+                                                                        )
+
+    print("Pearson correlation coefficient:", spearman_corr)
+
+
+
     pearson = reconstructed_df['ranking'].corr(reconstructed_df['difference'], method='spearman')
     print("Spearman Correlation coefficient:instruction_max_normalized_value ", pearson)
+
+
+
+
+
+    reconstructed_df = reconstructed_df[reconstructed_df['instruction_max_token'].notna()]
+
+    # 计算两列之间的皮尔逊相关系数
+    spearman_corr = reconstructed_df['instruction_weight'].corr(reconstructed_df['difference2'],method='spearman')
+    print("Pearson correlation coefficient:", spearman_corr)
+
+
+    spearman_corr = reconstructed_df['instruction_max_normalized_value'].corr(reconstructed_df['difference2'],method='spearman'
+                                                                        )
+
+    print("Pearson correlation coefficient:", spearman_corr)
+
+
+
+    pearson = reconstructed_df['ranking'].corr(reconstructed_df['difference2'], method='spearman')
+    print("Spearman Correlation coefficient:instruction_max_normalized_value ", pearson)
+
+    # print(reconstructed_df.columns)
 
     # print(reconstructed_df.columns)
 
