@@ -476,11 +476,11 @@ def main(method,start,end):
     inference_df.to_pickle(f"{start}_{end}_{method}_short_new_prompt_qa_inferenced_df.pkl")
     print("\ndone the inference")
 
-    with open(f"{start}_{end}_{method}_short_new_prompt_qa_inferenced_df.pkl", "rb") as f:
-        postprocess_inferenced_df = pickle.load(f)
-    postprocess_inferenced_df = postproces_inferenced(postprocess_inferenced_df)
-    postprocess_inferenced_df.to_pickle(f"{start}_{end}_{method}_short_new_prompt_qa_postprocess_inferenced_df.pkl")
-    print("\n done the postprocess")
+    # with open(f"{start}_{end}_{method}_short_new_prompt_qa_inferenced_df.pkl", "rb") as f:
+    #     postprocess_inferenced_df = pickle.load(f)
+    # postprocess_inferenced_df = postproces_inferenced(postprocess_inferenced_df)
+    # postprocess_inferenced_df.to_pickle(f"{start}_{end}_{method}_short_new_prompt_qa_postprocess_inferenced_df.pkl")
+    # print("\n done the postprocess")
 
 
 
@@ -488,10 +488,10 @@ def main(method,start,end):
 
 
 if __name__ == "__main__":
-    start = 1303
+    start = 1403
     end = start + 100
-    #main("similarity",start, end)
-    #main("discretize", start, end)
+    main("similarity",start, end)
+    main("discretize", start, end)
     main("logits", start, end)
 
 
