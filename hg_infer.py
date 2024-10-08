@@ -639,12 +639,12 @@ def main(method):
    #  print("\n done the postprocess")
    #
    #
-   #  with open(f"{start}_{end}_{method}_30_new_postprocess_inferenced_df.pkl", "rb") as f:
-   #      postprocess_inferenced_df = pickle.load(f)
-   #
-   #  perturbed_df = run_peturbation(postprocess_inferenced_df.copy())
-   #  perturbed_df.to_pickle(f"{start}_{end}_{method}_30_new_perturbed_df.pkl")
-   #  print("\n done the perturbed")
+    with open(f"{start}_{end}_{method}_30_new_postprocess_inferenced_df.pkl", "rb") as f:
+        postprocess_inferenced_df = pickle.load(f)
+
+    perturbed_df = run_peturbation(postprocess_inferenced_df.copy())
+    perturbed_df.to_pickle(f"{start}_{end}_{method}_30_new_perturbed_df.pkl")
+    print("\n done the perturbed")
 
     with open(f"{start}_{end}_{method}_30_new_perturbed_df.pkl", "rb") as f:
         reconstructed_df = pickle.load(f)
