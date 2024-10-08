@@ -48,7 +48,7 @@ def generate_text_with_ig(model, tokenizer, current_input):
 
     generated_tokens = outputs[0][len(model_input["input_ids"]):]
     response = tokenizer.decode(generated_tokens, skip_special_tokens=True)
-    # print("response",response)
+    print("response",response)
 
 
 
@@ -59,6 +59,7 @@ def run_initial_inference(model,tokenizer,df):
     data = []
 
     for ind, example in enumerate(df.select(range(len(df)-1))):
+            print("inference example", ind)
 
             real_output = generate_text_with_ig(model, tokenizer,example['query'] )
 
