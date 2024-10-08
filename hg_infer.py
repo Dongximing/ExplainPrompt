@@ -495,7 +495,7 @@ def new_gradient_attribution(model, tokenizer, prompt,max_new_tokens):
         skip_tokens=[1],  # skip the special token for the start of the text <s>
     )
 
-    step_list = list(range(30))
+    step_list = [0,6,12,18,24]
     #print(step_list)
     attr_res = llm_attr.attribute(inp=inp,target= response,step_list=step_list, n_steps=10)
     gpu_memory_usage = torch.cuda.max_memory_allocated(device=0)
@@ -627,35 +627,35 @@ def main(method):
     end = start +200
 
     model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
-   # method = "gradient"
-   #  inference_df = run_initial_inference(start=start,end=end,model=model,tokenizer=tokenizer,method=method)
-   #  inference_df.to_pickle(f"{start}_{end}_{method}_30_new_inferenced_df.pkl")
-   #  print("\ndone the inference")
-   #
-   #  with open(f"{start}_{end}_{method}_30_new_inferenced_df.pkl", "rb") as f:
-   #      postprocess_inferenced_df = pickle.load(f)
-   #  postprocess_inferenced_df = postproces_inferenced(postprocess_inferenced_df)
-   #  postprocess_inferenced_df.to_pickle(f"{start}_{end}_{method}_30_new_postprocess_inferenced_df.pkl")
-   #  print("\n done the postprocess")
-   #
-   #
-    with open(f"{start}_{end}_{method}_30_new_postprocess_inferenced_df.pkl", "rb") as f:
+
+    inference_df = run_initial_inference(start=start,end=end,model=model,tokenizer=tokenizer,method=method)
+    inference_df.to_pickle(f"{start}_{end}_{method}_6step_new_inferenced_df.pkl")
+    print("\ndone the inference")
+
+    with open(f"{start}_{end}_{method}_6step_new_inferenced_df.pkl", "rb") as f:
+        postprocess_inferenced_df = pickle.load(f)
+    postprocess_inferenced_df = postproces_inferenced(postprocess_inferenced_df)
+    postprocess_inferenced_df.to_pickle(f"{start}_{end}_{method}_6step_new_postprocess_inferenced_df.pkl")
+    print("\n done the postprocess")
+
+
+    with open(f"{start}_{end}_{method}_6step_new_postprocess_inferenced_df.pkl", "rb") as f:
         postprocess_inferenced_df = pickle.load(f)
 
     perturbed_df = run_peturbation(postprocess_inferenced_df.copy())
-    perturbed_df.to_pickle(f"{start}_{end}_{method}_30_new_perturbed_df.pkl")
+    perturbed_df.to_pickle(f"{start}_{end}_{method}_6step_new_perturbed_df.pkl")
     print("\n done the perturbed")
 
-    with open(f"{start}_{end}_{method}_30_new_perturbed_df.pkl", "rb") as f:
+    with open(f"{start}_{end}_{method}_6step_new_perturbed_df.pkl", "rb") as f:
         reconstructed_df = pickle.load(f)
     reconstructed_df = do_peturbed_reconstruct(reconstructed_df.copy(), None)
-    reconstructed_df.to_pickle(f"{start}_{end}_{method}_30_new_reconstructed_df.pkl")
+    reconstructed_df.to_pickle(f"{start}_{end}_{method}_6step_new_reconstructed_df.pkl")
     print("\n done the reconstructed")
 
-    with open(f"{start}_{end}_{method}_30_new_reconstructed_df.pkl", "rb") as f:
+    with open(f"{start}_{end}_{method}_6step_new_reconstructed_df.pkl", "rb") as f:
         reconstructed_df = pickle.load(f)
     perturbed_inferenced_df = run_peturbed_inference(reconstructed_df, model, tokenizer)
-    perturbed_inferenced_df.to_pickle(f"{start}_{end}_{method}_30_new_perturbed_inferenced_df.pkl")
+    perturbed_inferenced_df.to_pickle(f"{start}_{end}_{method}_6step_new_perturbed_inferenced_df.pkl")
     print("\n done the reconstructed inference data")
 if __name__ == "__main__":
     main("new_gradient")

@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import textstat
 
-input_file = "1403_1503_discretize_short_new_prompt_qa_postprocess_inferenced_df.pkl"
+input_file = "1024/5303_5403_discretize_1024_llama2_qa_new_postprocess_inferenced_df.pkl"
 encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
 
 def calculate_ranking(row, target_token):
@@ -81,7 +81,7 @@ with open(input_file, "rb") as f:
     df1 = pickle.load(f)
 
 
-with open("openai_result/1403_1503_flesh_baseline_qa_inferenced_df.pkl", "rb") as f:
+with open("1024/5303_5403_1024_qa_hg_baseline_inferenced_df.pkl", "rb") as f:
     df2 = pickle.load(f)
 
     filtered_df2 = df2[df2['prompt'].isin(df1['query'])]
@@ -100,7 +100,7 @@ with open(input_file, "rb") as f:
     reconstructed_df = pickle.load(f)
     # spearman_corr = reconstructed_df['instruction_weight'].corr(reconstructed_df['difference'], method='spearman')
     # print("Spearman Correlation coefficient:", spearman_corr)
-    reconstructed_df = reconstructed_df[reconstructed_df['difference'] > 1]
+    reconstructed_df = reconstructed_df[reconstructed_df['difference']>0.7]
     print(reconstructed_df.columns)
     reconstructed_df = reconstructed_df[reconstructed_df['instruction_max_token'].notna()]
 
