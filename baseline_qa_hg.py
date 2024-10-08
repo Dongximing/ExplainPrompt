@@ -43,10 +43,10 @@ def generate_text_with_ig(model, tokenizer, current_input):
     """
 
     model_input = tokenizer(current_input, return_tensors="pt", padding=True, truncation=True).to("cuda")
-    outputs = model.generate(model_input["input_ids"], temperature=0.1, output_logits=True, max_new_tokens=256,
+    outputs = model.generate(model_input["input_ids"], temperature=0.1,  max_new_tokens=256,
                              )
-    print(outputs[len(model_input["input_ids"][0]):])
-    generated_tokens = outputs[len(model_input["input_ids"][0]):]
+
+    generated_tokens = outputs[0][len(model_input["input_ids"]):]
     response = tokenizer.decode(generated_tokens, skip_special_tokens=True)
     print("response",response)
 
