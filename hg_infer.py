@@ -182,6 +182,7 @@ def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
             'position': i
         } for i, item in enumerate(tokens)]
         end_time = time.time()
+        print("end_time - start_time", end_time - start_time)
         return {
             "tokens": final_attributes_dict
         }, baseline_input, end_time - start_time, 0
@@ -216,6 +217,7 @@ def weighted_normal_ig(model, tokenizer, prompt):
     gpu_memory_usage = gpu_memory_usage/1024/1024/1204
     print(f"GPU Memory Usage: {gpu_memory_usage} GB")
     end_time = time.time()
+    print("end_time - start_time", end_time - start_time)
     #print(f"{final_attributes_dict}")
     return {
         "tokens": final_attributes_dict
@@ -339,6 +341,7 @@ def perturbation_attribution_top_k(model, tokenizer, prompt):
         'position': i
     } for i, item in enumerate(labels)]
     end_time = time.time()
+    print("end_time - start_time", end_time - start_time)
     return {
         "tokens": final_attributes_dict
     },target,end_time - start_time, gpu_memory_usage
@@ -383,6 +386,7 @@ def perturbation_attribution(model, tokenizer, prompt):
         'position': i
     } for i, item in enumerate(labels)]
     end_time = time.time()
+    print("end_time - start_time", end_time - start_time)
     return {
         "tokens": final_attributes_dict
     },target, end_time - start_time, gpu_memory_usage
@@ -427,6 +431,7 @@ def gradient_attribution(model, tokenizer, prompt):
     gpu_memory_usage = gpu_memory_usage/1024/1024/1204
     print(f"GPU Memory Usage: {gpu_memory_usage} GB")
     end_time = time.time()
+    print("end_time - start_time",end_time - start_time)
     #print(f"{final_attributes_dict}")
     return {
         "tokens": final_attributes_dict
