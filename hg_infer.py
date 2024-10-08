@@ -255,7 +255,7 @@ def generate_text_with_logit(model, tokenizer, current_input, bl=True):
     all_top_logits = []
     # print(outputs.scores)
     if bl:
-        k = 20
+        k = 300
     else:
         k = 1
     for i in range(len(outputs.scores)):
@@ -436,6 +436,87 @@ def gradient_attribution(model, tokenizer, prompt):
     return {
         "tokens": final_attributes_dict
     }, target, end_time - start_time, gpu_memory_usage
+def generate_text_with_ig(model, tokenizer, current_input, max_new_tokens,bl=False):
+    """
+    Generate text using the given model and tokenizer.
+
+    Parameters:
+    - model: The model to generate text.
+    - tokenizer: The tokenizer used to tokenize the input.
+    - input: The input string(prompt string)
+
+    Returns:
+        - response: The generated text based on the input prompt.
+    """
+    if type(current_input) == str:
+        inputs = tokenizer([current_input], return_tensors="pt",add_special_tokens=False).to("cuda")
+    else:
+        inputs = tokenizer.decode(current_input[0])
+
+        inputs = tokenizer([inputs], return_tensors="pt",add_special_tokens=False).to("cuda")
+
+    outputs = model.generate(**inputs, temperature=0.01, output_logits=True, max_new_tokens=max_new_tokens,
+                             return_dict_in_generate=True, output_scores=True)
+    response = tokenizer.decode(outputs['sequences'][0][len(inputs["input_ids"][0]):], skip_special_tokens=True)
+    #print(outputs)
+    all_top_logits = []
+    # print(outputs.scores)
+    #print(outputs['sequences'][0][len(inputs["input_ids"][0]):])
+    tensor_list = outputs['sequences'][0][len(inputs["input_ids"][0]):].tolist()
+    for i,id in enumerate(tensor_list):
+        log_probabilities = (outputs.logits)[i]
+        top_logits= log_probabilities[0][id]
+        all_top_logits.append((top_logits))
+    top_indices = sorted(range(len(all_top_logits)), key=lambda x: all_top_logits[x], reverse=True)[:5]
+
+    return response,top_indices
+def new_gradient_attribution(model, tokenizer, prompt,max_new_tokens):
+    """
+    Calculate attribution using gradient method.
+
+    Parameters:
+    - model: The model to calculate the attribution for.
+    - tokenizer: The tokenizer used to tokenize the input.
+    - prompt: The input tokens for which to calculate the attribution.
+    - kwargs: Additional keyword arguments for the gradient method.
+
+    Returns:
+    - attribution: The attributions calculated using the gradient method.
+    """
+    import time
+    start_time = time.time()
+    response, top_indices = generate_text_with_ig(model, tokenizer, prompt,max_new_tokens)
+    emb_layer = model.get_submodule("model.embed_tokens")
+    ig = LayerIntegratedGradients(model, emb_layer)
+    llm_attr = LLMGradientAttribution(ig, tokenizer)
+    inp = TextTokenInput(
+        prompt,
+        tokenizer,
+        skip_tokens=[1],  # skip the special token for the start of the text <s>
+    )
+
+    step_list = list(range(30))
+    #print(step_list)
+    attr_res = llm_attr.attribute(inp=inp,target= response,step_list=step_list, n_steps=10)
+    gpu_memory_usage = torch.cuda.max_memory_allocated(device=0)
+    real_attr_res = attr_res.token_attr.cpu().detach().numpy()
+    real_attr_res = np.absolute(real_attr_res)
+    real_attr_res = np.sum(real_attr_res, axis=0)
+    labels = attr_res.input_tokens
+    newer_sum_normalized_array = real_attr_res / np.sum(real_attr_res)
+    final_attributes_dict = [{
+        'token': hg_strip_tokenizer_prefix(labels[i]),
+        'type': 'input',
+        'value': newer_sum_normalized_array[i],
+        'position': i
+    } for i, item in enumerate(labels)]
+    gpu_memory_usage = gpu_memory_usage/1024/1024/1204
+    #print(f"GPU Memory Usage: {gpu_memory_usage} GB")
+    end_time = time.time()
+    print(f"response---------》{response}")
+    return {
+        "tokens": final_attributes_dict
+    }, response, end_time - start_time, gpu_memory_usage
 
 
 
@@ -470,6 +551,11 @@ def calculate_attributes(prompt,component_sentences,model,tokenizer,method):
         return attribution, words_importance, component_importance, target,time,gpu_memory_usage
     elif calculate_method == "top_k_perturbation":
         attribution,target,time,gpu_memory_usage = perturbation_attribution_top_k(model, tokenizer, prompt=prompt)
+        words_importance = calculate_word_scores(prompt, attribution)
+        component_importance = calculate_component_scores(words_importance.get('tokens'), component_sentences)
+        return attribution, words_importance, component_importance, target,time,gpu_memory_usage
+    elif calculate_method == "new_gradient":
+        attribution,target,time,gpu_memory_usage = new_gradient_attribution(model, tokenizer, prompt=prompt, max_new_tokens=30)
         words_importance = calculate_word_scores(prompt, attribution)
         component_importance = calculate_component_scores(words_importance.get('tokens'), component_sentences)
         return attribution, words_importance, component_importance, target,time,gpu_memory_usage
@@ -538,42 +624,42 @@ def run_peturbed_inference(df, model, tokenizer):
 
 def main(method):
     start = 45100
-    end = start +3
+    end = start +200
 
     model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
    # method = "gradient"
     inference_df = run_initial_inference(start=start,end=end,model=model,tokenizer=tokenizer,method=method)
-    inference_df.to_pickle(f"{start}_{end}_{method}_new_inferenced_df.pkl")
+    inference_df.to_pickle(f"{start}_{end}_{method}_30_new_inferenced_df.pkl")
     print("\ndone the inference")
 
-    # with open(f"{start}_{end}_{method}_new_inferenced_df.pkl", "rb") as f:
-    #     postprocess_inferenced_df = pickle.load(f)
-    # postprocess_inferenced_df = postproces_inferenced(postprocess_inferenced_df)
-    # postprocess_inferenced_df.to_pickle(f"{start}_{end}_{method}_new_postprocess_inferenced_df.pkl")
-    # print("\n done the postprocess")
-    #
-    #
-    # with open(f"{start}_{end}_{method}_new_postprocess_inferenced_df.pkl", "rb") as f:
-    #     postprocess_inferenced_df = pickle.load(f)
-    #
-    # perturbed_df = run_peturbation(postprocess_inferenced_df.copy())
-    # perturbed_df.to_pickle(f"{start}_{end}_{method}_new_perturbed_df.pkl")
-    # print("\n done the perturbed")
-    #
-    # with open(f"{start}_{end}_{method}_new_perturbed_df.pkl", "rb") as f:
-    #     reconstructed_df = pickle.load(f)
-    # reconstructed_df = do_peturbed_reconstruct(reconstructed_df.copy(), None)
-    # reconstructed_df.to_pickle(f"{start}_{end}_{method}_new_reconstructed_df.pkl")
-    # print("\n done the reconstructed")
-    #
-    # with open(f"{start}_{end}_{method}_new_reconstructed_df.pkl", "rb") as f:
-    #     reconstructed_df = pickle.load(f)
-    # perturbed_inferenced_df = run_peturbed_inference(reconstructed_df, model, tokenizer)
-    # perturbed_inferenced_df.to_pickle(f"{start}_{end}_{method}_new_perturbed_inferenced_df.pkl")
-    # print("\n done the reconstructed inference data")
+    with open(f"{start}_{end}_{method}_30_new_inferenced_df.pkl", "rb") as f:
+        postprocess_inferenced_df = pickle.load(f)
+    postprocess_inferenced_df = postproces_inferenced(postprocess_inferenced_df)
+    postprocess_inferenced_df.to_pickle(f"{start}_{end}_{method}_30_new_postprocess_inferenced_df.pkl")
+    print("\n done the postprocess")
+
+
+    with open(f"{start}_{end}_{method}_30_new_postprocess_inferenced_df.pkl", "rb") as f:
+        postprocess_inferenced_df = pickle.load(f)
+
+    perturbed_df = run_peturbation(postprocess_inferenced_df.copy())
+    perturbed_df.to_pickle(f"{start}_{end}_{method}_new_perturbed_df.pkl")
+    print("\n done the perturbed")
+
+    with open(f"{start}_{end}_{method}_30_new_perturbed_df.pkl", "rb") as f:
+        reconstructed_df = pickle.load(f)
+    reconstructed_df = do_peturbed_reconstruct(reconstructed_df.copy(), None)
+    reconstructed_df.to_pickle(f"{start}_{end}_{method}_30_new_reconstructed_df.pkl")
+    print("\n done the reconstructed")
+
+    with open(f"{start}_{end}_{method}_30_new_reconstructed_df.pkl", "rb") as f:
+        reconstructed_df = pickle.load(f)
+    perturbed_inferenced_df = run_peturbed_inference(reconstructed_df, model, tokenizer)
+    perturbed_inferenced_df.to_pickle(f"{start}_{end}_{method}_30_new_perturbed_inferenced_df.pkl")
+    print("\n done the reconstructed inference data")
 if __name__ == "__main__":
-    main("gradient")
-    main("new_perturbation")
+    main("new_gradient")
+    #main("new_perturbation")
 
 
     #main("top_k_perturbation")

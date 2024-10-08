@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import textstat
 
-input_file = "hg_short/5303_5403_discretize_llama2_qa_new_postprocess_inferenced_df.pkl"
+input_file = "1403_1503_discretize_short_new_prompt_qa_postprocess_inferenced_df.pkl"
 encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
 
 def calculate_ranking(row, target_token):
@@ -81,7 +81,7 @@ with open(input_file, "rb") as f:
     df1 = pickle.load(f)
 
 
-with open("5303_5403_qa_hg_baseline_inferenced_df.pkl", "rb") as f:
+with open("openai_result/1403_1503_flesh_baseline_qa_inferenced_df.pkl", "rb") as f:
     df2 = pickle.load(f)
 
     filtered_df2 = df2[df2['prompt'].isin(df1['query'])]
