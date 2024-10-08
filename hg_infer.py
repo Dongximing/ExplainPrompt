@@ -628,23 +628,23 @@ def main(method):
 
     model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
    # method = "gradient"
-    inference_df = run_initial_inference(start=start,end=end,model=model,tokenizer=tokenizer,method=method)
-    inference_df.to_pickle(f"{start}_{end}_{method}_30_new_inferenced_df.pkl")
-    print("\ndone the inference")
-
-    with open(f"{start}_{end}_{method}_30_new_inferenced_df.pkl", "rb") as f:
-        postprocess_inferenced_df = pickle.load(f)
-    postprocess_inferenced_df = postproces_inferenced(postprocess_inferenced_df)
-    postprocess_inferenced_df.to_pickle(f"{start}_{end}_{method}_30_new_postprocess_inferenced_df.pkl")
-    print("\n done the postprocess")
-
-
-    with open(f"{start}_{end}_{method}_30_new_postprocess_inferenced_df.pkl", "rb") as f:
-        postprocess_inferenced_df = pickle.load(f)
-
-    perturbed_df = run_peturbation(postprocess_inferenced_df.copy())
-    perturbed_df.to_pickle(f"{start}_{end}_{method}_new_perturbed_df.pkl")
-    print("\n done the perturbed")
+   #  inference_df = run_initial_inference(start=start,end=end,model=model,tokenizer=tokenizer,method=method)
+   #  inference_df.to_pickle(f"{start}_{end}_{method}_30_new_inferenced_df.pkl")
+   #  print("\ndone the inference")
+   #
+   #  with open(f"{start}_{end}_{method}_30_new_inferenced_df.pkl", "rb") as f:
+   #      postprocess_inferenced_df = pickle.load(f)
+   #  postprocess_inferenced_df = postproces_inferenced(postprocess_inferenced_df)
+   #  postprocess_inferenced_df.to_pickle(f"{start}_{end}_{method}_30_new_postprocess_inferenced_df.pkl")
+   #  print("\n done the postprocess")
+   #
+   #
+   #  with open(f"{start}_{end}_{method}_30_new_postprocess_inferenced_df.pkl", "rb") as f:
+   #      postprocess_inferenced_df = pickle.load(f)
+   #
+   #  perturbed_df = run_peturbation(postprocess_inferenced_df.copy())
+   #  perturbed_df.to_pickle(f"{start}_{end}_{method}_30_new_perturbed_df.pkl")
+   #  print("\n done the perturbed")
 
     with open(f"{start}_{end}_{method}_30_new_perturbed_df.pkl", "rb") as f:
         reconstructed_df = pickle.load(f)
