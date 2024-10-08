@@ -459,7 +459,7 @@ def calculate_attributes(prompt,component_sentences,model,tokenizer,method):
         component_importance = calculate_component_scores(words_importance.get('tokens'), component_sentences)
         return attribution, words_importance, component_importance, target,time,gpu_memory_usage
     elif calculate_method == "new_perturbation":
-        attribution,target,time,gpu_memory_usage = new_logit_parallel(model, tokenizer, prompt=prompt,max_new_tokens=max_new_tokens)
+        attribution,target,time,gpu_memory_usage = new_logit_parallel(model, tokenizer, prompt=prompt,max_new_tokens=2)
         words_importance = calculate_word_scores(prompt, attribution)
         component_importance = calculate_component_scores(words_importance.get('tokens'), component_sentences)
         return attribution, words_importance, component_importance, target,time,gpu_memory_usage
