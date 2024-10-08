@@ -32,7 +32,7 @@ def generated_tensor_candidate(baseline):
 
     return batches
 
-def load_model(model_name, bnb_config):
+def load_model(model_name, bnb320ig):
     """
     loading huggingface model.
 
@@ -255,7 +255,7 @@ def generate_text_with_logit(model, tokenizer, current_input, bl=True):
     all_top_logits = []
     # print(outputs.scores)
     if bl:
-        k = 300
+        k = 320
     else:
         k = 1
     for i in range(len(outputs.scores)):
@@ -629,36 +629,36 @@ def main(method):
     model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
 
     inference_df = run_initial_inference(start=start,end=end,model=model,tokenizer=tokenizer,method=method)
-    inference_df.to_pickle(f"{start}_{end}_{method}_conf_new_inferenced_df.pkl")
+    inference_df.to_pickle(f"{start}_{end}_{method}320_new_inferenced_df.pkl")
     print("\ndone the inference")
 
-    with open(f"{start}_{end}_{method}_conf_new_inferenced_df.pkl", "rb") as f:
+    with open(f"{start}_{end}_{method}320_new_inferenced_df.pkl", "rb") as f:
         postprocess_inferenced_df = pickle.load(f)
     postprocess_inferenced_df = postproces_inferenced(postprocess_inferenced_df)
-    postprocess_inferenced_df.to_pickle(f"{start}_{end}_{method}_conf_new_postprocess_inferenced_df.pkl")
+    postprocess_inferenced_df.to_pickle(f"{start}_{end}_{method}320_new_postprocess_inferenced_df.pkl")
     print("\n done the postprocess")
 
 
-    with open(f"{start}_{end}_{method}_conf_new_postprocess_inferenced_df.pkl", "rb") as f:
+    with open(f"{start}_{end}_{method}320_new_postprocess_inferenced_df.pkl", "rb") as f:
         postprocess_inferenced_df = pickle.load(f)
 
     perturbed_df = run_peturbation(postprocess_inferenced_df.copy())
-    perturbed_df.to_pickle(f"{start}_{end}_{method}_conf_new_perturbed_df.pkl")
+    perturbed_df.to_pickle(f"{start}_{end}_{method}320_new_perturbed_df.pkl")
     print("\n done the perturbed")
 
-    with open(f"{start}_{end}_{method}_conf_new_perturbed_df.pkl", "rb") as f:
+    with open(f"{start}_{end}_{method}320_new_perturbed_df.pkl", "rb") as f:
         reconstructed_df = pickle.load(f)
     reconstructed_df = do_peturbed_reconstruct(reconstructed_df.copy(), None)
-    reconstructed_df.to_pickle(f"{start}_{end}_{method}_conf_new_reconstructed_df.pkl")
+    reconstructed_df.to_pickle(f"{start}_{end}_{method}320_new_reconstructed_df.pkl")
     print("\n done the reconstructed")
 
-    with open(f"{start}_{end}_{method}_conf_new_reconstructed_df.pkl", "rb") as f:
+    with open(f"{start}_{end}_{method}320_new_reconstructed_df.pkl", "rb") as f:
         reconstructed_df = pickle.load(f)
     perturbed_inferenced_df = run_peturbed_inference(reconstructed_df, model, tokenizer)
-    perturbed_inferenced_df.to_pickle(f"{start}_{end}_{method}_conf_new_perturbed_inferenced_df.pkl")
+    perturbed_inferenced_df.to_pickle(f"{start}_{end}_{method}320_new_perturbed_inferenced_df.pkl")
     print("\n done the reconstructed inference data")
 if __name__ == "__main__":
-    main("new_gradient")
+    main("top_k_perturbation")
     #main("new_perturbation")
 
 
