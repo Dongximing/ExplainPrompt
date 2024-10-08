@@ -624,7 +624,7 @@ def run_peturbed_inference(df, model, tokenizer):
 
 def main(method):
     start = 45100
-    end = start +200
+    end = start +100
 
     model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
 
