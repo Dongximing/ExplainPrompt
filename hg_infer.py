@@ -32,7 +32,7 @@ def generated_tensor_candidate(baseline):
 
     return result_tensor
 
-def load_model(model_name, bnb_top{number}ig):
+def load_model(model_name, bnb_top):
     """
     loading huggingface model.
 
