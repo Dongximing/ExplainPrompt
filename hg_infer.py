@@ -455,7 +455,7 @@ def generate_text_with_ig(model, tokenizer, current_input, max_new_tokens,number
 
         inputs = tokenizer([inputs], return_tensors="pt",add_special_tokens=False).to("cuda")
 
-    outputs = model.generate(**inputs, temperature=0.01, output_logits=True, max_new_tokens=max_new_tokens,
+    outputs = model.generate(**inputs, temperature=0.01, output_logits=True, max_new_tokens=5,
                              return_dict_in_generate=True, output_scores=True)
     response = tokenizer.decode(outputs['sequences'][0][len(inputs["input_ids"][0]):], skip_special_tokens=True)
     #print(outputs)
@@ -495,7 +495,7 @@ def generate_text_with_ig_seq(model, tokenizer, current_input, max_new_tokens,nu
 
         inputs = tokenizer([inputs], return_tensors="pt",add_special_tokens=False).to("cuda")
 
-    outputs = model.generate(**inputs, temperature=0.01, output_logits=True, max_new_tokens=max_new_tokens,
+    outputs = model.generate(**inputs, temperature=0.01, output_logits=True, max_new_tokens=5,
                              return_dict_in_generate=True, output_scores=True)
     response = tokenizer.decode(outputs['sequences'][0][len(inputs["input_ids"][0]):], skip_special_tokens=True)
     #print(outputs)
