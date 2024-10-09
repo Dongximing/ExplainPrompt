@@ -73,7 +73,7 @@ def generate_text(model, tokenizer,input):
     model_input = tokenizer(input, return_tensors="pt", padding=True, truncation=True).to("cuda")
     model.eval()
     with torch.no_grad():
-        output_ids = model.generate(model_input["input_ids"], max_new_tokens=100, temperature=0.01,
+        output_ids = model.generate(model_input["input_ids"], max_new_tokens=5, temperature=0.01,
                                     return_dict_in_generate=True, output_scores=True)
         input_length = 1 if model.config.is_encoder_decoder else model_input.input_ids.shape[1]
         generated_tokens = output_ids.sequences[:, input_length:]
@@ -133,7 +133,7 @@ def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
     start_time = time.time()
     tenseor_List = []
     with torch.no_grad():
-        result = model.generate(model_input["input_ids"], temperature=0.01, max_new_tokens=max_new_tokens,
+        result = model.generate(model_input["input_ids"], temperature=0.01, max_new_tokens=5,
                                 return_dict_in_generate=True, output_scores=True, output_logits=True)
         baseline_output_ids = result[0]
         # print('baseline_output_ids',len(baseline_output_ids[0][real_length:]))
@@ -142,7 +142,7 @@ def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
         for i, batch in enumerate(candidate_input):
 
             candidate_result = model.generate(batch, temperature=0.01, output_logits=True,
-                                          max_new_tokens=max_new_tokens,
+                                          max_new_tokens=5,
                                           return_dict_in_generate=True, output_scores=True)
 
             candidate_result_respone = candidate_result[0]
@@ -248,7 +248,7 @@ def generate_text_with_logit(model, tokenizer, current_input, bl=True):
 
         inputs = tokenizer([inputs], return_tensors="pt",add_special_tokens=False).to("cuda")
 
-    outputs = model.generate(**inputs, temperature=0.01, output_logits=True, max_new_tokens=2,
+    outputs = model.generate(**inputs, temperature=0.01, output_logits=True, max_new_tokens=5,
                              return_dict_in_generate=True, output_scores=True)
     response = tokenizer.decode(outputs['sequences'][0][len(inputs["input_ids"][0]):], skip_special_tokens=True)
     # print(outputs)
@@ -635,7 +635,7 @@ def calculate_attributes(prompt,component_sentences,model,tokenizer,method,numbe
         component_importance = calculate_component_scores(words_importance.get('tokens'), component_sentences)
         return attribution, words_importance, component_importance, target,time,gpu_memory_usage
     elif calculate_method == "new_perturbation":
-        attribution,target,time,gpu_memory_usage = new_logit_parallel(model, tokenizer, prompt=prompt,max_new_tokens=2)
+        attribution,target,time,gpu_memory_usage = new_logit_parallel(model, tokenizer, prompt=prompt,max_new_tokens=5)
         words_importance = calculate_word_scores(prompt, attribution)
         component_importance = calculate_component_scores(words_importance.get('tokens'), component_sentences)
         return attribution, words_importance, component_importance, target,time,gpu_memory_usage
@@ -650,12 +650,12 @@ def calculate_attributes(prompt,component_sentences,model,tokenizer,method,numbe
         component_importance = calculate_component_scores(words_importance.get('tokens'), component_sentences)
         return attribution, words_importance, component_importance, target,time,gpu_memory_usage
     elif calculate_method == "new_gradient":
-        attribution,target,time,gpu_memory_usage = new_gradient_attribution(model, tokenizer, prompt=prompt, max_new_tokens=100,number = number)
+        attribution,target,time,gpu_memory_usage = new_gradient_attribution(model, tokenizer, prompt=prompt, max_new_tokens=5,number = number)
         words_importance = calculate_word_scores(prompt, attribution)
         component_importance = calculate_component_scores(words_importance.get('tokens'), component_sentences)
         return attribution, words_importance, component_importance, target,time,gpu_memory_usage
     elif calculate_method == "new_gradient_seq":
-        attribution,target,time,gpu_memory_usage = new_gradient_attribution_seq(model, tokenizer, prompt=prompt, max_new_tokens=100,number = number)
+        attribution,target,time,gpu_memory_usage = new_gradient_attribution_seq(model, tokenizer, prompt=prompt, max_new_tokens=5,number = number)
         words_importance = calculate_word_scores(prompt, attribution)
         component_importance = calculate_component_scores(words_importance.get('tokens'), component_sentences)
         return attribution, words_importance, component_importance, target,time,gpu_memory_usage
@@ -678,6 +678,7 @@ def run_initial_inference(start, end,model,tokenizer,method,number):
     for ind, example in enumerate(df.select(range(len(df)-1))):
 
             token, word, component, real_output,exec_time,gpu_memory_usage = calculate_attributes(example['sentence'], example['component_range'],model,tokenizer,method,number)
+            print("real_output",real_output)
             if token is not None:
                 data.append(
                     {'prompt': example['sentence'], "real_output": real_output, "token_level": token, "word_level": word,
@@ -689,7 +690,8 @@ def run_initial_inference(start, end,model,tokenizer,method,number):
                      "instruction_weight": component[0].get("instruction"),
                      "query_weight": component[0].get("query"),
                      "exec_time": exec_time,
-                     "gpu_memory_usage":gpu_memory_usage
+                     "gpu_memory_usage":gpu_memory_usage,
+                     "length":example['length'],
                      }
                 )
             else:
@@ -724,7 +726,7 @@ def run_peturbed_inference(df, model, tokenizer):
 
 def main(method,number,model, tokenizer):
     start = 45100
-    end = start +200
+    end = start +100
 
     #model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
 
@@ -761,10 +763,10 @@ if __name__ == "__main__":
     #main("top_k_perturbation")
     model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
 
-    main("new_gradient",50,model, tokenizer)
-    # main("new_gradient", 10,model, tokenizer)
+    main("new_perturbation",5,model, tokenizer)
+    main("new_gradient", 5,model, tokenizer)
     # main("new_gradient", 5,model, tokenizer)
-    main("new_gradient_seq",50,model, tokenizer)
+    # main("new_gradient_seq",50,model, tokenizer)
     # main("new_gradient_seq", 10,model, tokenizer)
     # main("new_gradient_seq", 5,model, tokenizer)
 

@@ -58,7 +58,12 @@ def load_and_preprocess(dataset_range):
 
 if __name__ == "__main__":
 
-    df = load_and_preprocess([45000,63000])
-    print(df[10])
-    print(df[11])
-    print(df[12])
+    df = load_and_preprocess([0,63000])
+
+
+    print(df[16000])
+    print(df[24000])
+    print(df[32000])
+    print(df[40000])
+    print(df[56000])
+
