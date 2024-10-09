@@ -759,12 +759,12 @@ def main(method,number):
     print("\n done the reconstructed inference data")
 if __name__ == "__main__":
     #main("top_k_perturbation")
-    main("new_perturbation",30)
-    main("new_perturbation", 10)
-    main("new_perturbation", 5)
-    main("new_perturbation_seq",30)
-    main("new_perturbation_seq", 10)
-    main("new_perturbation_seq", 5)
+    main("new_gradient",30)
+    main("new_gradient", 10)
+    main("new_gradient", 5)
+    main("new_gradient_seq",30)
+    main("new_gradient_seq", 10)
+    main("new_gradient_seq", 5)
 
 
 
