@@ -255,7 +255,7 @@ def generate_text_with_logit(model, tokenizer, current_input, bl=True):
     all_top_logits = []
     # print(outputs.scores)
     if bl:
-        k = 160000
+        k = 16000
     else:
         k = 1
     for i in range(len(outputs.scores)):
