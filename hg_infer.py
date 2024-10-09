@@ -763,7 +763,7 @@ if __name__ == "__main__":
     #main("top_k_perturbation")
     model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
 
-    main("new_perturbation",5,model, tokenizer)
+    #main("new_perturbation",5,model, tokenizer)
     main("new_gradient", 5,model, tokenizer)
     # main("new_gradient", 5,model, tokenizer)
     # main("new_gradient_seq",50,model, tokenizer)
