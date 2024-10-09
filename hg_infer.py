@@ -722,11 +722,11 @@ def run_peturbed_inference(df, model, tokenizer):
     print("sentence has done!")
     return df
 
-def main(method,number):
+def main(method,number,model, tokenizer):
     start = 45100
     end = start +200
 
-    model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
+    #model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
 
     inference_df = run_initial_inference(start=start,end=end,model=model,tokenizer=tokenizer,method=method,number=number)
     inference_df.to_pickle(f"{start}_{end}_{method}_top{number}_new_inferenced_df.pkl")
@@ -759,12 +759,14 @@ def main(method,number):
     print("\n done the reconstructed inference data")
 if __name__ == "__main__":
     #main("top_k_perturbation")
-    main("new_gradient",30)
-    main("new_gradient", 10)
-    main("new_gradient", 5)
-    main("new_gradient_seq",30)
-    main("new_gradient_seq", 10)
-    main("new_gradient_seq", 5)
+    model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
+
+    #main("new_gradient",30,model, tokenizer)
+    main("new_gradient", 10,model, tokenizer)
+    main("new_gradient", 5,model, tokenizer)
+    main("new_gradient_seq",30,model, tokenizer)
+    main("new_gradient_seq", 10,model, tokenizer)
+    main("new_gradient_seq", 5,model, tokenizer)
 
 
 
