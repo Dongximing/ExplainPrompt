@@ -73,7 +73,7 @@ def generate_text(model, tokenizer,input):
     model_input = tokenizer(input, return_tensors="pt", padding=True, truncation=True).to("cuda")
     model.eval()
     with torch.no_grad():
-        output_ids = model.generate(model_input["input_ids"], max_new_tokens=2, temperature=0.01,
+        output_ids = model.generate(model_input["input_ids"], max_new_tokens=100, temperature=0.01,
                                     return_dict_in_generate=True, output_scores=True)
         input_length = 1 if model.config.is_encoder_decoder else model_input.input_ids.shape[1]
         generated_tokens = output_ids.sequences[:, input_length:]
@@ -724,7 +724,7 @@ def run_peturbed_inference(df, model, tokenizer):
 
 def main(method,number):
     start = 45100
-    end = start +3
+    end = start +200
 
     model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
 
