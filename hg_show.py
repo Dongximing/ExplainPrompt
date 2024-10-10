@@ -540,9 +540,9 @@ def new_gradient_attribution(model, tokenizer, prompt,max_new_tokens):
         skip_tokens=[1],  # skip the special token for the start of the text <s>
     )
 
-    step_list = [0,1,2,3,4,5,6,7,8,9,10,11,12]
+    step_list = [0,1,2,3,4,5]
     #print(step_list)
-    attr_res = llm_attr.attribute(inp=inp,target= response,step_list=step_list, n_steps=10)
+    attr_res = llm_attr.attribute(inp=inp,target= response,step_list=step_list, n_steps=20)
     gpu_memory_usage = torch.cuda.max_memory_allocated(device=0)
     real_attr_res = attr_res.token_attr.cpu().detach().numpy()
     real_attr_res = np.absolute(real_attr_res)
