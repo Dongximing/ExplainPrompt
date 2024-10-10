@@ -114,21 +114,21 @@ import matplotlib.pyplot as plt
 
 
 
-# input_lengths = [10, 20, 30, 40, 50]
-# Pertb_Sim = [6.10, 6.89, 7.14, 7.27, 7.68]
-# Perb_Log = [6.10, 6.21, 6.58, 6.75, 6.94]
-# Perb_Dis = [6.13, 6.14, 6.57, 6.85, 7.01]
-# Inference = [4.34, 4.37, 4.85, 4.57, 4.74]
-input_lengths = [20, 320, 3200, 16000, 32000]
-Pertb_Sim = [0.63, 0.67,0.67,0.66,0.74]
-Perb_Log = [0.34,0.42,0.40,0.37,0.36]
+input_lengths = [10, 20, 30, 40, 50]
+Pertb_Sim = [6.10, 6.89, 7.14, 7.27, 7.68]
+Perb_Log = [6.10, 6.21, 6.58, 6.75, 6.94]
+Perb_Dis = [6.13, 6.14, 6.57, 6.85, 7.01]
+Inference = [4.34, 4.37, 4.85, 4.57, 4.74]
+# input_lengths = [20, 320, 3200, 16000, 32000]
+# Pertb_Sim = [0.63, 0.67,0.67,0.66,0.74]
+# Perb_Log = [0.34,0.42,0.40,0.37,0.36]
 
-plt.figure(figsize=(7, 7))
-plt.plot(input_lengths, Pertb_Sim, marker='o', linestyle='-', label='Treatment')
-plt.plot(input_lengths, Perb_Log, marker='o', linestyle='-', label='Control')
-# plt.plot(input_lengths, Perb_Dis, marker='o', linestyle='-', label='Perb_Dis')
-# plt.plot(input_lengths, Inference, marker='o', linestyle='-', label='Pure Inference')
-#
+plt.figure(figsize=(6, 6))
+plt.plot(input_lengths, Pertb_Sim, marker='o', linestyle='-', label='Perb_Sim')
+plt.plot(input_lengths, Perb_Log, marker='o', linestyle='-', label='Perb_Log')
+plt.plot(input_lengths, Perb_Dis, marker='o', linestyle='-', label='Perb_Dis')
+plt.plot(input_lengths, Inference, marker='o', linestyle='-', label='Pure Inference')
+
 # input_lengths = [30, 60, 90, 120, 150]
 # Pertb_Sim = [6.10, 6.89, 7.14, 7.27, 7.68]
 # Agg_Equ = [3.95, 5.31, 6.77, 7.45, 9.79]
@@ -143,13 +143,13 @@ plt.plot(input_lengths, Perb_Log, marker='o', linestyle='-', label='Control')
 # plt.plot(input_lengths, Inference, marker='o', linestyle='-', label='Pure Inference')
 #
 
-# plt.yticks(range(0, 11))  # Setting y-axis ticks from 0 to 10
-# plt.ylim(0, 10)
+plt.yticks(range(0, 11))  # Setting y-axis ticks from 0 to 10
+plt.ylim(0, 10)
 plt.xticks(fontsize=14)  # Increasing font size of the x-axis labels
 plt.yticks(fontsize=14)
-plt.xlabel('K- Accessed tokens with logits',fontsize=18)
-plt.ylabel('Flip rate',fontsize=18)
-plt.legend(loc='center right',fontsize=15)
+plt.xlabel('Input Length',fontsize=18)
+plt.ylabel('Inference time(seconds)',fontsize=18)
+plt.legend(loc='lower right',fontsize=15)
 plt.grid(True)
 plt.show()
 
