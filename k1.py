@@ -69,7 +69,7 @@ def generate_text(model, tokenizer,input):
     model_input = tokenizer(input, return_tensors="pt", padding=True, truncation=True).to("cuda")
     model.eval()
     with torch.no_grad():
-        output_ids = model.generate(model_input["input_ids"], max_new_tokens=10,temperature=0.01)[0]
+        output_ids = model.generate(model_input["input_ids"], max_new_tokens=50,temperature=0.01)[0]
         generated_tokens = output_ids[len(model_input["input_ids"][0]):]
         response = tokenizer.decode(generated_tokens, skip_special_tokens=True)
     #print(f"Generated text: {response}")
@@ -96,7 +96,7 @@ def generate_text_with_logit(model, tokenizer, current_input, bl=True):
 
         inputs = tokenizer([inputs], return_tensors="pt",add_special_tokens=False).to("cuda")
 
-    outputs = model.generate(**inputs, temperature=0.01, output_logits=True, max_new_tokens=10,
+    outputs = model.generate(**inputs, temperature=0.01, output_logits=True, max_new_tokens=50,
                              return_dict_in_generate=True, output_scores=True)
     response = tokenizer.decode(outputs['sequences'][0][len(inputs["input_ids"][0]):], skip_special_tokens=True)
     # print(outputs)
@@ -141,7 +141,7 @@ def generate_text_with_ig(model, tokenizer, current_input, max_new_tokens,bl=Fal
 
         inputs = tokenizer([inputs], return_tensors="pt",add_special_tokens=False).to("cuda")
 
-    outputs = model.generate(**inputs, temperature=0.01, output_logits=True, max_new_tokens=10,
+    outputs = model.generate(**inputs, temperature=0.01, output_logits=True, max_new_tokens=50,
                              return_dict_in_generate=True, output_scores=True)
     response = tokenizer.decode(outputs['sequences'][0][len(inputs["input_ids"][0]):], skip_special_tokens=True)
     #print(outputs)
@@ -262,9 +262,9 @@ def similarity_method(model, tokenizer, prompt):
     start_time = time.time()
 
     with torch.no_grad():
-        output_ids = model.generate(candidate_input, max_new_tokens=10, temperature=0.1)
+        output_ids = model.generate(candidate_input, max_new_tokens=50, temperature=0.1)
         response = tokenizer.batch_decode(output_ids[:, real_length:], skip_special_tokens=True)
-        output_ids = model.generate(model_input["input_ids"], max_new_tokens=10, temperature=0.1)[0]
+        output_ids = model.generate(model_input["input_ids"], max_new_tokens=50, temperature=0.1)[0]
         baseline_input = tokenizer.decode(output_ids[len(model_input['input_ids'][0][:]):], skip_special_tokens=True)
 
     # Load the model
@@ -315,10 +315,10 @@ def discretize_method(model, tokenizer, prompt):
     start_time = time.time()
 
     with torch.no_grad():
-        output_ids = model.generate(candidate_input, max_new_tokens=10, temperature=0.1)
+        output_ids = model.generate(candidate_input, max_new_tokens=50, temperature=0.1)
         #     print(output_ids)
         response = tokenizer.batch_decode(output_ids[:, real_length:], skip_special_tokens=True)
-        output_ids = model.generate(model_input["input_ids"], max_new_tokens=10, temperature=0.1)[0]
+        output_ids = model.generate(model_input["input_ids"], max_new_tokens=50, temperature=0.1)[0]
         baseline_input = tokenizer.decode(output_ids[len(model_input['input_ids'][0][:]):], skip_special_tokens=True)
 
 
@@ -438,7 +438,7 @@ def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
     start_time = time.time()
     tenseor_List = []
     with torch.no_grad():
-        result = model.generate(model_input["input_ids"], temperature=0.1, max_new_tokens=10,
+        result = model.generate(model_input["input_ids"], temperature=0.1, max_new_tokens=50,
                                 return_dict_in_generate=True, output_scores=True, output_logits=True)
         baseline_output_ids = result[0]
         print('baseline_output_ids',baseline_output_ids[0][real_length:])
@@ -450,7 +450,7 @@ def new_logit_parallel(model, tokenizer, prompt, max_new_tokens):
         for i, batch in enumerate(candidate_input):
 
             candidate_result = model.generate(batch, temperature=0.1, output_logits=True,
-                                          max_new_tokens=10,
+                                          max_new_tokens=50,
                                           return_dict_in_generate=True, output_scores=True)
 
             candidate_result_respone = candidate_result[0]
@@ -706,7 +706,7 @@ def main(method,model, tokenizer,df,start,end ):
 if __name__ == "__main__":
     model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf", BitsAndBytesConfig(bits=4, quantization_type="fp16"))
     start = 16000
-    end = start + 3
+    end = start + 10
     df = load_and_preprocess([start, end])
 
     #main("gradient")
@@ -721,7 +721,7 @@ if __name__ == "__main__":
     main("discretize",model, tokenizer,df,start, end )
     main("new_perturbation", model, tokenizer, df, start, end)
     start = 24000
-    end = start + 3
+    end = start + 10
     df = load_and_preprocess([start, end])
 
     main("similarity",model, tokenizer,df,start, end )
@@ -729,7 +729,7 @@ if __name__ == "__main__":
     main("new_perturbation", model, tokenizer, df, start, end)
 
     start = 32000
-    end = start + 3
+    end = start + 10
     df = load_and_preprocess([start, end])
 
     main("similarity", model, tokenizer, df, start, end)
@@ -737,7 +737,7 @@ if __name__ == "__main__":
     main("new_perturbation", model, tokenizer, df, start, end)
 
     start = 56000
-    end = start + 3
+    end = start + 10
     df = load_and_preprocess([start, end])
 
     main("similarity", model, tokenizer, df, start, end)
