@@ -690,7 +690,7 @@ def run_initial_inference(prompt,model,tokenizer,method,max_new_tokens):
                 norm = plt.Normalize(min(values), max(values))
                 colors = cm.viridis(norm(values))
 
-                fig, ax = plt.subplots(figsize=(12, 3))
+                fig, ax = plt.subplots(figsize=(9, 10))
                 bars = ax.bar(unique_tokens, values, color=colors)
 
 
