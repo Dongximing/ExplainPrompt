@@ -695,7 +695,7 @@ def run_initial_inference(prompt,model,tokenizer,method,max_new_tokens):
 
 
                 ax.set_xlabel('Tokens')
-                ax.set_ylabel('Values')
+                ax.set_ylabel('Importance score')
 
                 plt.xticks(rotation=90)
 
