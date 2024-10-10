@@ -711,9 +711,9 @@ if __name__ == "__main__":
     #main("gradient")
 
     main("new_gradient",model, tokenizer,df,start, end )
-    main("similarity",model, tokenizer,df,start, end )
-    main("discretize",model, tokenizer,df,start, end )
-    main("new_perturbation", model, tokenizer, df, start, end)
+    #main("similarity",model, tokenizer,df,start, end )
+    #main("discretize",model, tokenizer,df,start, end )
+    #main("new_perturbation", model, tokenizer, df, start, end)
 
 
 

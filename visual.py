@@ -41,31 +41,39 @@ import matplotlib.pyplot as plt
 
 # Data from the table
 K_values = [5, 10, 30, 50]
-conf_top_ins = [1.0, 0.89, 0.91, 0.9]
-conf_bot_ins = [0.44, 0.204, 0.21, 0.27]
-conf_top_query = [0.08, 0.28, 0.25,0.26 ]
-conf_bot_query = [0.07, 0.25, 0.17, 0.22]
+# equal_treatment = [0.63,0.67,0.67,0.66,0.74]
+# equal_control = [0.34,0.42,0.40,0.37,0.36]
+# conf_treatment= [0.68,0.69,0.65,0.67]
+# conf_control = [0.32,0.33,0.34,0.32]
 
-eql_top_ins = [0.85, 0.87, 0.89, 0.87]
-eql_bot_ins = [0.34, 0.33, 0.32, 0.29]
-eql_top_query = [0.28, 0.31, 0.33,0.30 ]
-eql_bot_query = [0.21, 0.26, 0.24, 0.26]
+conf_treatment = [0.68,0.69,0.65,0.67]
+conf_control = [0.32,0.33,0.34,0.32]
+equal_treatment= [0.55,0.56,0.59,0.58]
+equal_control = [0.36,0.37,0.34,0.33]
+
+
 
 # Plotting the data
-plt.figure(figsize=(6, 6))
-plt.plot(K_values, conf_top_ins, marker='o', linestyle='-',label='Confidence Treatment Instruction')
-plt.plot(K_values, conf_bot_ins, marker='o', linestyle='-',label='Confidence Control Instruction')
-plt.plot(K_values, conf_top_query, marker='o', linestyle='-',label='Confidence Treatment Query')
-plt.plot(K_values, conf_bot_query, marker='o', linestyle='-',label='ConfidenceControl Query')
+plt.figure(figsize=(7, 7))
+# plt.plot(K_values, equal_treatment, marker='o', linestyle='-',label='Treatment')
+# plt.plot(K_values, equal_control, marker='o', linestyle='-',label='Control')
+plt.plot(K_values, equal_treatment, marker='o', linestyle='--',label='Treatment (Agg_Equ)')
+plt.plot(K_values, equal_control, marker='o', linestyle='--',label='Control (Agg_Equ)')
+plt.plot(K_values, conf_treatment, marker='o', linestyle='-',label='Treatment (Agg_Conf)')
+plt.plot(K_values, conf_control, marker='o', linestyle='-',label='Control (Agg_Conf)')
 
-plt.plot(K_values, eql_top_ins, marker='o', linestyle='--',label='Equal Treatment Instruction')
-plt.plot(K_values, eql_bot_ins, marker='o', linestyle='--',label='Equal Control Instruction')
-plt.plot(K_values, eql_top_query, marker='o', linestyle='--',label='Equal Treatment Query')
-plt.plot(K_values, eql_bot_query, marker='o', linestyle='--',label='Equal Control Query')
+# plt.plot(K_values, eql_top_ins, marker='o', linestyle='--',label='Equal Treatment Instruction')
+# plt.plot(K_values, eql_bot_ins, marker='o', linestyle='--',label='Equal Control Instruction')
+# plt.plot(K_values, eql_top_query, marker='o', linestyle='--',label='Equal Treatment Query')
+# plt.plot(K_values, eql_bot_query, marker='o', linestyle='--',label='Equal Control Query')
 
+plt.xticks(fontsize=14)  # Increasing font size of the x-axis labels
+plt.yticks(fontsize=14)
+# Increase the font size of "Treatment" in the legend
 
-plt.xlabel('Aggregation steps',fontsize=14)
-plt.ylabel('Flip rate',fontsize=14)
-plt.legend()
+plt.xlabel('M- Aggregated rounds',fontsize=18)
+plt.ylabel('Flip rate',fontsize=18)
+plt.legend(fontsize=15)
+
 plt.grid(True)
 plt.show()
